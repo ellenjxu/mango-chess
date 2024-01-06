@@ -1,0 +1,17 @@
+# no track build products
+*.a
+*.bin
+*.d
+*.elf
+*.exe
+*.list
+*.o
+
+# no track editor/os leftovers
+*.DS_Store
+[._]*.sw[a-p]
+.vscode/*
+*~
+.*~
+\#*\#
+.\#*
