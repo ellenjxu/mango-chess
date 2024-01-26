@@ -69,8 +69,9 @@ void test_timer(void) {
 }
 
 void test_breadboard(void) {
-    unsigned int segment[7] = {GPIO_PB4, GPIO_PB3, GPIO_PB2, GPIO_PC0, GPIO_PE16, GPIO_PD15, GPIO_PC1};
-    unsigned int digit[4] = {GPIO_PD17, GPIO_PB6, GPIO_PB12, GPIO_PB11};
+    unsigned int segment[7] = {GPIO_PD17, GPIO_PB6, GPIO_PB12, GPIO_PB11, GPIO_PB10, GPIO_PE17, GPIO_PB0};
+    unsigned int digit[4] = {GPIO_PB4, GPIO_PB3, GPIO_PB2, GPIO_PC0};
+
     unsigned int button = GPIO_PG13;
 
     for (int i = 0; i < 7; i++) {  // configure segments
