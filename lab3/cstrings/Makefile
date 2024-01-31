@@ -4,7 +4,7 @@ ARCH    = -march=rv64im -mabi=lp64
 ASFLAGS = $(ARCH)
 CFLAGS  = $(ARCH) -g -Og -I$$CS107E/include -Wall -ffreestanding
 LDFLAGS = -nostdlib -L$$CS107E/lib -T memmap.ld
-LDLIBS  =
+LDLIBS  = -lmango
 
 
 all : $(NAME).bin
