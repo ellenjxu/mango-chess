@@ -8,7 +8,7 @@
 #include "strings.h"
 #include "uart.h"
 
-// Copied from printf.c
+// Prototypes copied from printf.c to allow unit testing of helper functions
 int unsigned_to_base(char *buf, size_t bufsize, unsigned int val, int base, size_t min_width);
 int signed_to_base(char *buf, size_t bufsize, int val, int base, size_t min_width);
 
@@ -84,6 +84,8 @@ static void test_snprintf(void) {
     // Hexadecimal
     snprintf(buf, bufsize, "%04x", 0xef);
     assert(strcmp(buf, "00ef") == 0);
+    snprintf(buf, bufsize, "%lx", ~0L);
+    assert(strcmp(buf, "ffffffffffffffff") == 0);
 
     // Pointer
     snprintf(buf, bufsize, "%p", (void *) 0x20200004);
@@ -116,18 +118,18 @@ int sum(int n) {
 }
 
 void test_disassemble(void) {
-    const unsigned int add = 0xe0843005;
-    const unsigned int sub = 0xe24bd00c;
-    const unsigned int mov = 0xe3a0006b;
-    const unsigned int bne = 0x1afffffa;
+    const unsigned int add = 0x00f706b3;
+    const unsigned int xori = 0x0015c593;
+    const unsigned int bne = 0xfe061ce3;
+    const unsigned int sd = 0x02113423;
 
     // If you have not implemented the extension, core printf
     // will output address not disassembled followed by I
     // e.g.  "... disassembles to 0x07ffffd4I"
     printf("Encoded instruction %x disassembles to %pI\n", add, &add);
-    printf("Encoded instruction %x disassembles to %pI\n", sub, &sub);
-    printf("Encoded instruction %x disassembles to %pI\n", mov, &mov);
+    printf("Encoded instruction %x disassembles to %pI\n", xori, &xori);
     printf("Encoded instruction %x disassembles to %pI\n", bne, &bne);
+    printf("Encoded instruction %x disassembles to %pI\n", sd, &sd);
 
     unsigned int *fn = (unsigned int *)sum; // disassemble instructions from sum function
     for (int i = 0; i < 10; i++) {
@@ -146,8 +148,7 @@ void main(void) {
     test_strtonum();
     test_to_base();
     test_snprintf();
-    // test_disassemble();
-
+  //  test_disassemble();
 
     // TODO: Add more and better tests!
 

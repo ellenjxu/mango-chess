@@ -58,30 +58,24 @@ int printf(const char *format, ...) {
  * the encoded instruction. Accessing struct.field will extract just the bits
  * apportioned to that field. If you look at the assembly the compiler generates
  * to access a bitfield, you will see it simply masks/shifts for you. Neat!
-
-
-static const char *cond[16] = {"eq", "ne", "cs", "cc", "mi", "pl", "vs", "vc",
-                               "hi", "ls", "ge", "lt", "gt", "le", "", ""};
-static const char *opcodes[16] = {"and", "eor", "sub", "rsb", "add", "adc", "sbc", "rsc",
-                                  "tst", "teq", "cmp", "cmn", "orr", "mov", "bic", "mvn"};
+ */
+/*
+static const char *reg_names[32] = {"zero", "ra", "sp", "gp", "tp", "t0", "t1", "t2",
+                                    "s0/fp", "s1", "a0", "a1", "a2", "a3", "a4", "a5",
+                                    "a6", "a7", "s2", "s3", "s4", "s5", "s6", "s7",
+                                    "s8", "s9", "s10", "s11", "t3", "t4", "t5", "t6" };
 
 struct insn  {
-    uint32_t reg_op2:4;
-    uint32_t one:1;
-    uint32_t shift_op: 2;
-    uint32_t shift: 5;
-    uint32_t reg_dst:4;
-    uint32_t reg_op1:4;
-    uint32_t s:1;
-    uint32_t opcode:4;
-    uint32_t imm:1;
-    uint32_t kind:2;
-    uint32_t cond:4;
+    uint32_t opcode: 7;
+    uint32_t reg_d:  5;
+    uint32_t funct3: 3;
+    uint32_t reg_s1: 5;
+    uint32_t reg_s2: 5;
+    uint32_t funct7: 7;
 };
 
-static void sample_use(unsigned int *addr) {
+void sample_use(unsigned int *addr) {
     struct insn in = *(struct insn *)addr;
-    printf("opcode is %s, s is %d, reg_dst is r%d\n", opcodes[in.opcode], in.s, in.reg_dst);
+    printf("opcode is 0x%x, reg_dst is %s\n", in.opcode, reg_names[in.reg_d]);
 }
-
 */

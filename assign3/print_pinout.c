@@ -3,8 +3,9 @@
  * Sample test program that uses printf to output an ASCII version of
  * the Mango Pi pinout. (C translation of python $CS107E/bin/pinout.py)
  *
- * If your terminal does not support colors, change OUTPUT_ANSI_COLORS
- * from 1 to 0 to suppress color escapes and only print plain characters.
+ * If the terminal communication program you are using does not support
+ * color codes, change OUTPUT_ANSI_COLORS from 1 to 0 to suppress color
+ * escapes and only print plain characters.
  *
  * Author: Julie Zelenski <zelenski@cs.stanford.edu>
  */
@@ -36,7 +37,7 @@ static const char *board[] = {
     " O--|   |--|   |----------------| mini |---O ",
     " |                  +-------+      +-----+ | ",
     " |     " MAGENTA "Mango Pi" NORMAL "     |  D1   |      |micro| | ",
-    " |      " MAGENTA "MQ-Pro" NORMAL "      |  SoC  |      | sd  | | ",
+    " |     " MAGENTA " MQ-Pro " NORMAL "     |  SoC  |      | sd  | | ",
     " |                  +-------+      +-----+ | ",
     " |                                         | ",
     " | @ @ @ @ @ @ @ @ @ @ @ @ @ @ @ @ @ @ @ 1 | ",
@@ -53,7 +54,7 @@ static struct pair_t {
     { {"PG13",GREEN},   {"5V",RED} },
     { {"PG12",GREEN},   {"GND",BLACK} },
     { {"PB7",GREEN},    {"PB8 (TX)",GREEN} },
-    { {"GND",BLACK},     {"PB9 (RX)",GREEN} },
+    { {"GND",BLACK},    {"PB9 (RX)",GREEN} },
     { {"PD21",GREEN},   {"PB5",GREEN} },
     { {"PD22",GREEN},   {"GND",BLACK} },
     { {"PB0",GREEN},    {"PB1",GREEN} },
@@ -61,14 +62,14 @@ static struct pair_t {
     { {"MOSI",GREEN},   {"GND",BLACK} },
     { {"MISO",GREEN},   {"PC1",GREEN} },
     { {"SCLK",GREEN},   {"CS0",GREEN} },
-    { {"GND",BLACK},     {"PD15",GREEN} },
+    { {"GND",BLACK},    {"PD15",GREEN} },
     { {"PE17",BLUE},    {"PE16",BLUE} },
     { {"PB10",GREEN},   {"GND",BLACK} },
     { {"PB11",GREEN},   {"PC0",GREEN} },
     { {"PB12",GREEN},   {"GND",BLACK} },
     { {"PB6",GREEN},    {"PB2",GREEN} },
     { {"PD17",GREEN},   {"PB3",GREEN} },
-    { {"GND",BLACK},     {"PB4",GREEN} },
+    { {"GND",BLACK},    {"PB4",GREEN} },
 };
 
 static void print_colored_header(const char *str, int row_index) {
