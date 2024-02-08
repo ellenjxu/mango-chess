@@ -32,3 +32,4 @@ clean:
 .PHONY: all clean run
 .PRECIOUS: %.elf %.o
 
+GDB_FLAGS = -q --command=$$CS107E/other/gdbsim.commands
