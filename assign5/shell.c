@@ -8,6 +8,7 @@
 
 #define LINE_LEN 80
 
+// Module-level global variables for shell
 static struct {
     input_fn_t shell_read;
     formatted_fn_t shell_printf;
