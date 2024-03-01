@@ -15,8 +15,6 @@
 #include "timer.h"
 #include "uart.h"
 
-void console_enable_blink_cursor(void);
-
 void main(void) {
     interrupts_init();
     gpio_init();
@@ -27,7 +25,5 @@ void main(void) {
     shell_init(keyboard_read_next, console_printf);
 
     interrupts_global_enable(); // everything fully initialized, now turn on interrupts
-    console_enable_blink_cursor();
-    keyboard_use_interrupts();
     shell_run();
 }
