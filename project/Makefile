@@ -1,10 +1,5 @@
-# Sample makefile for project
-# Builds "myprogram.bin" from myprogram.c (edit PROGRAM to change)
-# Additional source file(s) mymodule.c (edit SOURCES to change)
-# Link against your libmango + reference libmango (edit LDLIBS, LDFLAGS to change)
-
-PROGRAM = myprogram.bin
-SOURCES = $(PROGRAM:.bin=.c) mymodule.c re.c
+PROGRAM = main.bin
+SOURCES = $(PROGRAM:.bin=.c) re.c
 
 all: $(PROGRAM)
 

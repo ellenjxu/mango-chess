@@ -1,12 +1,19 @@
 #ifndef RE_H
 #define RE_H
 
-// gpio pins for connecting keyboard clock/data lines
-#define RE_CLOCK GPIO_PG12
-#define RE_DATA GPIO_PB7
-#define RE_SW GPIO_PG13
+/*
+ * Module to drive rotary encoder. Uses three GPIO pins (clock, data and the
+ * push button).
+ *
+ * Author: Ellen Xu <ellenjxu@stanford.edu>
+ * Author: Javier Garcia Nieto <jgnieto@stanford.edu>
+ */
 
 #include "gpio.h"
+
+#define RE_CLOCK GPIO_PG12
+#define RE_DATA GPIO_PB7
+#define RE_SW GPIO_PG13 // (button)
 
 typedef struct re_device {
     gpio_id_t clock;

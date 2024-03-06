@@ -1,6 +1,8 @@
 ## Project title
+Mango Magic
 
 ## Team members
+Javier Garcia Nieto and Ellen Xu
 
 ## Project description
 

@@ -1,3 +1,9 @@
+/*
+ * Rotary encoder module for Mango Pi.
+ *
+ * Author: Ellen Xu <ellenjxu@stanford.edu>
+ * Author: Javier Garcia Nieto <jgnieto@stanford.edu>
+ */
 #include "re.h"
 #include "uart.h"
 #include "printf.h"
