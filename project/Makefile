@@ -55,7 +55,7 @@ $(SOURCES):
 libmymango.a:
 	$(error cannot find libmymango.a Change to mylib directory to build, then copy here)
 
-.PHONY: all clean run
+.PHONY: all clean run lib
 .PRECIOUS: %.elf %.o
 
 # disable built-in rules (they are not used)
