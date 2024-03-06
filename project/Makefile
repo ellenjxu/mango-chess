@@ -4,7 +4,7 @@
 # Link against your libmango + reference libmango (edit LDLIBS, LDFLAGS to change)
 
 PROGRAM = myprogram.bin
-SOURCES = $(PROGRAM:.bin=.c) mymodule.c
+SOURCES = $(PROGRAM:.bin=.c) mymodule.c re.c
 
 all: $(PROGRAM)
 
@@ -53,7 +53,7 @@ $(SOURCES):
 	$(error cannot find source file `$@` needed for build)
 
 libmymango.a:
-	$(error cannot find libmymango.a Change to mylib directory to build, then copy here)
+	$(error run `make lib` to build libmymango.a needed for build)
 
 .PHONY: all clean run lib
 .PRECIOUS: %.elf %.o
