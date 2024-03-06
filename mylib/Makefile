@@ -1,7 +1,7 @@
 # Makefile to build all named modules in library form libmymango.a
 
 LIBMANGO_MODULE_SOURCES = gpio.c timer.c timer_asm.s strings.c printf.c backtrace.c backtrace_asm.s symtab.c malloc.c \
-                       keyboard.c shell.c fb.c gl.c console.c ps2_assign7.c
+                       keyboard.c shell.c fb.c gl.c console.c ps2_assign7.c mouse.c
 
 all: libmymango.a
 

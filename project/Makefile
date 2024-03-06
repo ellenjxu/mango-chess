@@ -43,6 +43,10 @@ run: $(PROGRAM)
 clean:
 	rm -f *.o *.bin *.elf *.list *~
 
+lib:
+	$(MAKE) -C ../mylib
+	cp ../mylib/libmymango.a .
+
 # this rule will provide better error message when
 # a source file cannot be found (missing, misnamed)
 $(SOURCES):
