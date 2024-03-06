@@ -12,8 +12,6 @@
 #include "interrupts.h"
 #include "malloc.h"
 
-static re_device_t *dev;
-
 re_device_t* re_new(gpio_id_t clock_gpio, gpio_id_t data_gpio, gpio_id_t sw_gpio) {
     re_device_t* dev = malloc(sizeof(*dev));
 
@@ -38,10 +36,12 @@ re_device_t* re_new(gpio_id_t clock_gpio, gpio_id_t data_gpio, gpio_id_t sw_gpio
     return dev;
 }
 
+
+
 void re_test(void) {
     printf("hi\n");
 
-    dev = re_new(RE_CLOCK, RE_DATA, RE_SW);
+    re_device_t *dev = re_new(RE_CLOCK, RE_DATA, RE_SW);
     while (1) {
         int b = gpio_read(dev->clock); // goes low when midturn
     }
