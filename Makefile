@@ -1,5 +1,5 @@
 PROGRAM = main.bin
-SOURCES = $(PROGRAM:.bin=.c) re.c
+SOURCES = $(PROGRAM:.bin=.c) re.c bt_ext.c ringbuffer_ptr.c
 
 all: $(PROGRAM)
 
@@ -39,8 +39,8 @@ clean:
 	rm -f *.o *.bin *.elf *.list *~
 
 lib:
-	$(MAKE) -C ../mylib
-	cp ../mylib/libmymango.a .
+	$(MAKE) -C ../mycode/mylib
+	cp ../mycode/mylib/libmymango.a .
 
 # this rule will provide better error message when
 # a source file cannot be found (missing, misnamed)
