@@ -48,7 +48,14 @@ int main(void) {
 
         if (uart_haschar()) {
             char c = uart_getchar();
-            if (c == '\r') {
+            if (c == '\b') {
+                if (cmd_len > 0) {
+                    cmd_len--;
+                    cmd[cmd_len] = '\0';
+                    uart_putchar('\b');
+                    uart_putchar(' ');
+                }
+            } else if (c == '\r') {
             } else if (c == '\n') {
                 cmd[cmd_len] = '\0';
                 cmd_len = 0;

@@ -70,6 +70,8 @@ static struct {
     rb_t *rb_rx;
     rb_ptr_t *rb_tx;
 
+    bt_ext_role_t role;
+
     state_t state;
     volatile unsigned long last_rx;
 } module;

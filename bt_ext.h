@@ -15,4 +15,9 @@ int bt_ext_read(char *buf, size_t len);
 
 bool bt_has_data();
 
+typedef enum {
+    BT_EXT_ROLE_SUBORDINATE = 0,    // BT docs: "slave"
+    BT_EXT_ROLE_PRIMARY = 1,        // BT docs: "master"
+} bt_ext_role_t;
+
 #endif
