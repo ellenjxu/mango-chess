@@ -13,7 +13,7 @@ void bt_ext_send(const char *str);
 
 int bt_ext_read(char *buf, size_t len);
 
-bool bt_has_data();
+bool bt_ext_has_data();
 
 typedef enum {
     BT_EXT_ROLE_SUBORDINATE = 0,    // BT docs: "slave"

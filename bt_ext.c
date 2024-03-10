@@ -4,13 +4,13 @@
  * Author: Javier Garcia Nieto <jgnieto@stanford.edu>
  * Uart code adapted from provided uart.c module (by Julie Zelenski).
  */
+#include "assert.h"
 #include "bt_ext.h"
 #include "ccu.h"
 #include "gpio.h"
 #include "gpio_extra.h"
 #include "interrupts.h"
-#include "ringbuffer.h"
-#include "ringbuffer_ptr.h"
+#include "strings.h"
 #include "timer.h"
 #include <stdint.h>
 #include <stddef.h>
@@ -20,14 +20,21 @@
 #define UART_FN GPIO_FN_ALT7
 #define UART_INDEX 4
 
-#define RECEIVING_TIMEOUT_USEC 10 * 1000 // 10 ms, time for 12 bytes
-#define WAITING_TIMEOUT_USEC 3000 * 1000 // 1 s, time for AT response
+#define RESPONSE_TIMEOUT_USEC 10 * 1000 // 10 ms, time for 12 bytes
 
 #define LCR_DLAB            (1 << 7)
 #define USR_BUSY            (1 << 0)
 #define USR_TX_NOT_FULL     (1 << 1)
 #define USR_TX_NOT_EMPTY    (1 << 2)
 #define USR_RX_NOT_EMPTY    (1 << 3)
+
+#define SIZE(x) ((sizeof(x)) / (sizeof(*x)))
+
+#define JNXU_MESSAGE_START  "JGN"
+#define JNXU_MESSAGE_END    "EXU"
+#define JNXU_CMD_PREFIX     '&'
+#define JNXU_CMD_PING       "PING"
+#define JNXU_CMD_ECHO       "ECHO"
 
 // structs defined to match layout of hardware registers
 typedef union {
@@ -58,35 +65,15 @@ typedef union {
 
 #define UART_BASE ((uart_t *)0x02500000)
 
-typedef enum {
-    IDLE,       // not waiting for AT response
-    WAITING,    // waiting for AT response
-    RECEIVING,  // receiving AT response
-} state_t;
-
 static struct {
     volatile uart_t *uart;
 
-    rb_t *rb_rx;
-    rb_ptr_t *rb_tx;
-
     bt_ext_role_t role;
 
-    state_t state;
+    bool connected;
+
     volatile unsigned long last_rx;
 } module;
-
-static void handler_rx(uintptr_t pc, void *data) {
-    if (module.state == WAITING) {
-        module.state = RECEIVING;
-    }
-
-    unsigned char byte = module.uart->regs.rbr & 0xFF;
-    rb_enqueue(module.rb_rx, byte);
-
-    unsigned long now = timer_get_ticks();
-    module.last_rx = now;
-}
 
 static void setup_uart() {
     module.uart = UART_BASE + UART_INDEX;
@@ -126,11 +113,6 @@ static void setup_uart() {
 
     module.uart->regs.mcr = 0;    // disable modem control
     module.uart->regs.ier = 0;    // disable interrupts
-
-    // interrupt_source_t src = INTERRUPT_SOURCE_UART0 + UART_INDEX;
-    // interrupts_register_handler(src, handler_rx, NULL); // install handler
-    // interrupts_enable_source(src);  // turn on source
-    // module.uart->regs.ier = 1;      // enable interrupts in uart peripheral
 }
 
 static void send_uart(unsigned char byte) {
@@ -146,43 +128,103 @@ static bool haschar_uart(void) {
     return (module.uart->regs.usr & USR_RX_NOT_EMPTY) != 0;
 }
 
+static bool ringstrcmp(char *buf, size_t bufsize, int nbytes, char *cmp, size_t cmplen) {
+    if (nbytes < cmplen) return false;
+
+    int base = (nbytes - cmplen) % bufsize;
+    for (int i = 0; i < cmplen; i++) {
+        if (buf[(base + i) % bufsize] != cmp[i])
+            return false;
+    }
+
+    return true;
+}
+
 static unsigned char recv_uart(void) {
-    return module.uart->regs.rbr & 0xFF;
+    static const char *CONNECTED_MESSAGE = "OK+CONN";
+    static const char *LOST_MESSAGE      = "OK+LOST";
+
+    static char ring[7] = { '\0' };
+    static int nbytes = 32;
+
+    unsigned char byte = module.uart->regs.rbr & 0xFF;
+
+    ring[nbytes % sizeof(ring)] = byte;
+    
+    if (ringstrcmp(ring, sizeof(ring), nbytes, "OK+CONN", 7)) {
+        module.connected = true;
+    } else if (ringstrcmp(ring, sizeof(ring), nbytes, "OK+LOST", 7)) {
+        module.connected = false;
+    }
+
+    return byte;
+}
+
+static bool wait_response(char *buf, size_t len) {
+    assert(buf != NULL || len == 0);
+
+    if (len > 0) buf[0] = '\n';
+
+    int nbytes = 0;
+    bool ok_response = true;
+
+    unsigned long start = timer_get_ticks();
+    while (timer_get_ticks() - start < RESPONSE_TIMEOUT_USEC * TICKS_PER_USEC) {
+        if (haschar_uart()) {
+            unsigned char byte = recv_uart();
+            if ((nbytes == 0 && byte != 'O') || (nbytes == 1 && byte != 'K'))
+                ok_response = false;
+
+            if (++nbytes < len) {
+                buf[nbytes - 1] = byte;
+                buf[nbytes] = '\0';
+            }
+        }
+    }
+
+    return nbytes >= 2 && ok_response;
 }
 
 void bt_ext_init() {
+    static const char *CONFIG_COMMANDS[] = {
+        "AT",
+        "AT+RESET",
+        "AT+NOTI1",
+    };
+
     setup_uart();
 
-    module.rb_rx = rb_new();
-    module.rb_tx = rb_ptr_new();
+    for (int i = 0; i < SIZE(CONFIG_COMMANDS); i++) {
+        bt_ext_send(CONFIG_COMMANDS[i]);
+        assert(wait_response(NULL, 0));
+    }
 }
 
-static void update_receiving_state(void) {
-    if (module.state != RECEIVING)
-        return;
+void bt_ext_connect(const bt_ext_role_t role, const char *mac) {
+    static const char *ROLE_COMMANDS[] = { "AT+ROLE0", "AT+ROLE1" };
+    module.role = role;
 
-    unsigned long now = timer_get_ticks();
-    if (now - module.last_rx > RECEIVING_TIMEOUT_USEC * TICKS_PER_USEC) {
-        module.state = IDLE;
+    bt_ext_send("AT");
+    assert(wait_response(NULL, 0));
+    bt_ext_send(ROLE_COMMANDS[role]);
+    assert(wait_response(NULL, 0));
+
+    if (role == BT_EXT_ROLE_PRIMARY) {
+        bt_ext_send("AT+CON");
+        bt_ext_send(mac);
+
+        assert(wait_response(NULL, 0));
     }
 }
 
 void bt_ext_send(const char *str) {
-    while (module.state != IDLE) {
-        update_receiving_state();
-    }
-
     while (*str) {
         send_uart(*str++);
     }
-
-    // module.state = WAITING;
 }
 
 int bt_ext_read(char *buf, size_t len) {
     for (size_t i = 0; i < len - 1; i++) {
-        // int res;
-        // if (!rb_dequeue(module.rb_rx, &res)) {
         if (!haschar_uart()) {
             buf[i] = '\0';
             return i;
@@ -194,8 +236,10 @@ int bt_ext_read(char *buf, size_t len) {
     return len;
 }
 
-bool bt_has_data() {
-    // return !rb_empty(module.rb_rx);
+bool bt_ext_has_data() {
     return haschar_uart();
 }
 
+bool bt_ext_connected() {
+    return module.connected;
+}

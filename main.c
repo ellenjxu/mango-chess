@@ -35,35 +35,4 @@ int main(void) {
 
     interrupts_global_enable();
 
-    char cmd[1024];
-    int cmd_len = 0;
-    while (1) {
-        if (bt_has_data()) {
-            char buf[1024];
-            int len = bt_ext_read(buf, sizeof(buf));
-            if (len > 0) {
-                uart_putstring(buf);
-            }
-        }
-
-        if (uart_haschar()) {
-            char c = uart_getchar();
-            if (c == '\b') {
-                if (cmd_len > 0) {
-                    cmd_len--;
-                    cmd[cmd_len] = '\0';
-                    uart_putchar('\b');
-                    uart_putchar(' ');
-                }
-            } else if (c == '\r') {
-            } else if (c == '\n') {
-                cmd[cmd_len] = '\0';
-                cmd_len = 0;
-                bt_ext_send(cmd);
-            } else {
-                cmd[cmd_len++] = c;
-            }
-            uart_putchar(c);
-        }
-    }
 }
