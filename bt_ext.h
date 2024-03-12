@@ -14,7 +14,7 @@ typedef enum {
  */
 void bt_ext_init();
 
-void bt_ext_send(const char *str);
+bool bt_ext_send(const char *str, char *response, size_t len);
 
 int bt_ext_read(char *buf, size_t len);
 

@@ -21,6 +21,7 @@
 #define UART_INDEX 4
 
 #define RESPONSE_TIMEOUT_USEC 10 * 1000 // 10 ms, time for 12 bytes
+#define RETRIES               3
 
 #define LCR_DLAB            (1 << 7)
 #define USR_BUSY            (1 << 0)
@@ -29,12 +30,6 @@
 #define USR_RX_NOT_EMPTY    (1 << 3)
 
 #define SIZE(x) ((sizeof(x)) / (sizeof(*x)))
-
-#define JNXU_MESSAGE_START  "JGN"
-#define JNXU_MESSAGE_END    "EXU"
-#define JNXU_CMD_PREFIX     '&'
-#define JNXU_CMD_PING       "PING"
-#define JNXU_CMD_ECHO       "ECHO"
 
 // structs defined to match layout of hardware registers
 typedef union {
@@ -195,31 +190,39 @@ void bt_ext_init() {
     setup_uart();
 
     for (int i = 0; i < SIZE(CONFIG_COMMANDS); i++) {
-        bt_ext_send(CONFIG_COMMANDS[i]);
-        assert(wait_response(NULL, 0));
+        bt_ext_send(CONFIG_COMMANDS[i], NULL, 0);
     }
+}
+
+static void sendstr(const char *str) {
+    while (*str) {
+        send_uart(*str++);
+    }
+}
+
+bool bt_ext_send(const char *str, char *response, size_t len) {
+    for (int i = 0; i < RETRIES; i++) {
+        sendstr(str);
+        if (response != NULL) {
+            if (wait_response(response, len)) {
+                return true;
+            }
+        }
+    }
+
+    return false;
 }
 
 void bt_ext_connect(const bt_ext_role_t role, const char *mac) {
     static const char *ROLE_COMMANDS[] = { "AT+ROLE0", "AT+ROLE1" };
     module.role = role;
 
-    bt_ext_send("AT");
-    assert(wait_response(NULL, 0));
-    bt_ext_send(ROLE_COMMANDS[role]);
-    assert(wait_response(NULL, 0));
+    bt_ext_send("AT", NULL, 0);
+    bt_ext_send(ROLE_COMMANDS[role], NULL, 0);
 
     if (role == BT_EXT_ROLE_PRIMARY) {
-        bt_ext_send("AT+CON");
-        bt_ext_send(mac);
-
-        assert(wait_response(NULL, 0));
-    }
-}
-
-void bt_ext_send(const char *str) {
-    while (*str) {
-        send_uart(*str++);
+        sendstr("AT+CON");
+        bt_ext_send(mac, NULL, 0);
     }
 }
 
