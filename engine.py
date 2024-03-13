@@ -14,7 +14,6 @@ def get_move():
 
 with serial.Serial('/dev/ttyUSB0', 115200, timeout=1) as ser:
     try:
-        # move = ser.read()
         start = ser.readline().decode('utf-8').strip()
         while (start != "GAME_BEGIN"):
             start = ser.readline().decode('utf-8').strip()
