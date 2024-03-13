@@ -12,8 +12,6 @@
 #define RE_SW GPIO_PD21 // (button)
 
 void terminal_bluetooth(void) {
-    uart_init();
-    bt_ext_init();
     char cmd[1024];
     int cmd_len = 0;
     uint8_t result[1024];
@@ -56,8 +54,8 @@ void terminal_bluetooth(void) {
 }
 
 int main(void) {
-    terminal_bluetooth();
-    while (true) {
-        read_move();
-    }
+    uart_init();
+    bt_ext_init();
+    // terminal_bluetooth();
+    chess_game();
 }
