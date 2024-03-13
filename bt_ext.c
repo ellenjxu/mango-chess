@@ -110,11 +110,6 @@ static void setup_uart() {
     module.uart->regs.ier = 0;    // disable interrupts
 }
 
-static void send_uart(unsigned char byte) {
-    while ((module.uart->regs.usr & USR_TX_NOT_FULL) == 0) ;
-    module.uart->regs.thr = byte & 0xFF;
-}
-
 static void flush_uart(void) {
     while ((module.uart->regs.usr & USR_BUSY) != 0) ;
 }
@@ -123,7 +118,7 @@ static bool haschar_uart(void) {
     return (module.uart->regs.usr & USR_RX_NOT_EMPTY) != 0;
 }
 
-static bool ringstrcmp(char *buf, size_t bufsize, int nbytes, char *cmp, size_t cmplen) {
+static bool ringstrcmp(uint8_t *buf, size_t bufsize, int nbytes, char *cmp, size_t cmplen) {
     if (nbytes < cmplen) return false;
 
     int base = (nbytes - cmplen) % bufsize;
@@ -135,14 +130,14 @@ static bool ringstrcmp(char *buf, size_t bufsize, int nbytes, char *cmp, size_t 
     return true;
 }
 
-static unsigned char recv_uart(void) {
+static uint8_t recv_uart(void) {
     static const char *CONNECTED_MESSAGE = "OK+CONN";
     static const char *LOST_MESSAGE      = "OK+LOST";
 
-    static char ring[7] = { '\0' };
+    static uint8_t ring[7] = { '\0' };
     static int nbytes = 32;
 
-    unsigned char byte = module.uart->regs.rbr & 0xFF;
+    uint8_t byte = module.uart->regs.rbr & 0xFF;
 
     ring[nbytes % sizeof(ring)] = byte;
     
@@ -155,7 +150,7 @@ static unsigned char recv_uart(void) {
     return byte;
 }
 
-static bool wait_response(char *buf, size_t len) {
+static bool wait_response(uint8_t *buf, size_t len) {
     assert(buf != NULL || len == 0);
 
     if (len > 0) buf[0] = '\n';
@@ -166,7 +161,7 @@ static bool wait_response(char *buf, size_t len) {
     unsigned long start = timer_get_ticks();
     while (timer_get_ticks() - start < RESPONSE_TIMEOUT_USEC * TICKS_PER_USEC) {
         if (haschar_uart()) {
-            unsigned char byte = recv_uart();
+            uint8_t byte = recv_uart();
             if ((nbytes == 0 && byte != 'O') || (nbytes == 1 && byte != 'K'))
                 ok_response = false;
 
@@ -190,19 +185,30 @@ void bt_ext_init() {
     setup_uart();
 
     for (int i = 0; i < SIZE(CONFIG_COMMANDS); i++) {
-        bt_ext_send(CONFIG_COMMANDS[i], NULL, 0);
+        bt_ext_send_cmd(CONFIG_COMMANDS[i], NULL, 0);
     }
 }
 
-static void sendstr(const char *str) {
-    while (*str) {
-        send_uart(*str++);
+void bt_ext_send_raw_str(const char *buf) {
+    while (*buf) {
+        bt_ext_send_raw_byte(*buf++);
     }
 }
 
-bool bt_ext_send(const char *str, char *response, size_t len) {
+void bt_ext_send_raw_array(const uint8_t *buf, size_t len) {
+    for (size_t i = 0; i < len; i++) {
+        bt_ext_send_raw_byte(buf[i]);
+    }
+}
+
+void bt_ext_send_raw_byte(const uint8_t byte) {
+    while ((module.uart->regs.usr & USR_TX_NOT_FULL) == 0) ;
+    module.uart->regs.thr = byte;
+}
+
+bool bt_ext_send_cmd(const char *str, uint8_t *response, size_t len) {
     for (int i = 0; i < RETRIES; i++) {
-        sendstr(str);
+        bt_ext_send_raw_str(str);
         if (response != NULL) {
             if (wait_response(response, len)) {
                 return true;
@@ -215,24 +221,28 @@ bool bt_ext_send(const char *str, char *response, size_t len) {
 
 void bt_ext_connect(const bt_ext_role_t role, const char *mac) {
     static const char *ROLE_COMMANDS[] = { "AT+ROLE0", "AT+ROLE1" };
+
     module.role = role;
 
-    bt_ext_send("AT", NULL, 0);
-    bt_ext_send(ROLE_COMMANDS[role], NULL, 0);
+    bt_ext_send_cmd("AT", NULL, 0);
+    bt_ext_send_cmd(ROLE_COMMANDS[role], NULL, 0);
 
     if (role == BT_EXT_ROLE_PRIMARY) {
-        sendstr("AT+CON");
-        bt_ext_send(mac, NULL, 0);
-    }
+        char buf[32];
+        buf[0] = '\0';
+        strlcat(buf, "AT+CON", sizeof(buf));
+        strlcat(buf, mac, sizeof(buf));
+        bt_ext_send_cmd(buf, NULL, 0);
+    } // SUBORDINATE does not need to connect, just wait
 }
 
-int bt_ext_read(char *buf, size_t len) {
+int bt_ext_read(uint8_t *buf, size_t len) {
     for (size_t i = 0; i < len - 1; i++) {
         if (!haschar_uart()) {
             buf[i] = '\0';
             return i;
         }
-        unsigned char res = recv_uart();
+        uint8_t res = recv_uart();
         buf[i] = res;
     }
     buf[len - 1] = '\0';
