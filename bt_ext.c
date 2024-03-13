@@ -112,6 +112,7 @@ static uint8_t recv_uart(void) {
 
     ring[nbytes % sizeof(ring)] = byte;
     
+    // FIXME: ensure we check for OK+CONN but discard OK+CONNE etc.
     if (ringstrcmp(ring, sizeof(ring), nbytes, CONNECTED_MESSAGE, sizeof(CONNECTED_MESSAGE) - 1)) {
         module.connected = true;
     } else if (ringstrcmp(ring, sizeof(ring), nbytes, LOST_MESSAGE, sizeof(LOST_MESSAGE) - 1)) {
