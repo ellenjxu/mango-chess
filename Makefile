@@ -39,8 +39,9 @@ clean:
 	rm -f *.o *.bin *.elf *.list *~
 
 lib:
-	$(MAKE) -C ../mycode/mylib
-	cp ../mycode/mylib/libmymango.a .
+	$(MAKE) -C $$CS107E/../mylib clean
+	$(MAKE) -C $$CS107E/../mylib
+	cp $$CS107E/../mylib/libmymango.a .
 
 # this rule will provide better error message when
 # a source file cannot be found (missing, misnamed)
