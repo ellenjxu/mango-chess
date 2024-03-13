@@ -10,6 +10,8 @@ typedef enum {
     BT_EXT_ROLE_PRIMARY = 1,        // BT docs: "master"
 } bt_ext_role_t;
 
+typedef void (*bt_ext_fn_t)(void);
+
 /*
  * `bt_ext_init` initializes the Bluetooth module.
  */
@@ -30,9 +32,12 @@ void bt_ext_send_raw_str(const char *buf);
 
 /*
  * `bt_ext_read` reads data from the Bluetooth module into the `buf` buffer. The
- * `len` parameter specifies the size of the `buf` buffer.
+ * `len` parameter specifies the size of the `buf` buffer. Adds a null-terminator
+ * to the end of the buffer for convenience. (This does mean that the buffer is
+ * effectively one byte smaller than the `len` parameter, as one byte is
+ * reserverd for it.)
  *
- * Returns the number of bytes read.
+ * Returns the number of bytes read (not including the null-terminator).
  */
 int bt_ext_read(uint8_t *buf, size_t len);
 
@@ -57,5 +62,20 @@ bool bt_ext_has_data();
  * device, `false` otherwise.
  */
 bool bt_ext_connected();
+
+/*
+ * `bt_ext_register_trigger` registers a function to be called when the given
+ * byte is received from the Bluetooth module. The `fn` parameter is the
+ * function to be called.
+ *
+ * Asserts that the byte is not already registered.
+ */
+void bt_ext_register_trigger(uint8_t byte, bt_ext_fn_t fn);
+
+/*
+ * `bt_ext_unregister_trigger` unregisters the function to be called when the
+ * given byte is received from the Bluetooth module.
+ */
+void bt_ext_unregister_trigger(uint8_t byte);
 
 #endif

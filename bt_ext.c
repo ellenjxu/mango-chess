@@ -11,6 +11,7 @@
 #include "gpio_extra.h"
 #include "interrupts.h"
 #include "printf.h"
+#include "ringbuffer.h"
 #include "strings.h"
 #include "timer.h"
 #include <stdint.h>
@@ -69,11 +70,67 @@ static struct {
     volatile uart_t *uart;
 
     bt_ext_role_t role;
-
     bool connected;
+
+    rb_t *rxbuf;
+
+    bt_ext_fn_t trigger[256];
 
     volatile unsigned long last_rx;
 } module;
+
+static bool haschar_uart(void) {
+    return (module.uart->regs.usr & USR_RX_NOT_EMPTY) != 0;
+}
+
+static uint8_t dequeue_byte(void) {
+    assert(!rb_empty(module.rxbuf));
+    int res_integer;
+    rb_dequeue(module.rxbuf, &res_integer);
+    uint8_t res = res_integer & 0xFF;
+    return res;
+}
+
+static bool ringstrcmp(uint8_t *buf, size_t bufsize, int nbytes, const char *cmp, size_t cmplen) {
+    if (nbytes < cmplen) return false;
+
+    int base = (nbytes - cmplen) % bufsize;
+    for (int i = 0; i < cmplen; i++) {
+        if (buf[(base + i) % bufsize] != cmp[i])
+            return false;
+    }
+
+    return true;
+}
+
+static uint8_t recv_uart(void) {
+    static uint8_t ring[7] = { '\0' };
+    static int nbytes = 32;
+
+    uint8_t byte = module.uart->regs.rbr & 0xFF;
+
+    ring[nbytes % sizeof(ring)] = byte;
+    
+    if (ringstrcmp(ring, sizeof(ring), nbytes, CONNECTED_MESSAGE, sizeof(CONNECTED_MESSAGE) - 1)) {
+        module.connected = true;
+    } else if (ringstrcmp(ring, sizeof(ring), nbytes, LOST_MESSAGE, sizeof(LOST_MESSAGE) - 1)) {
+        module.connected = false;
+    }
+
+    return byte;
+}
+
+static void handle_interrupt(uintptr_t pc, void *data) {
+    while (haschar_uart()) {
+        uint8_t byte = recv_uart();
+        int byte_integer = 0xFF & byte;
+        rb_enqueue(module.rxbuf, byte);
+
+        if (module.trigger[byte_integer] != NULL) {
+            module.trigger[byte_integer]();
+        }
+    }
+}
 
 static void setup_uart() {
     module.uart = UART_BASE + UART_INDEX;
@@ -112,44 +169,26 @@ static void setup_uart() {
     module.uart->regs.lcr = (module.uart->regs.lcr & ~0b1111) | settings;
 
     module.uart->regs.mcr = 0;    // disable modem control
-    module.uart->regs.ier = 0;    // disable interrupts
+
+    interrupt_source_t src = INTERRUPT_SOURCE_UART0 + UART_INDEX;
+    interrupts_register_handler(src, handle_interrupt, NULL); // install handler
+    interrupts_enable_source(src);  // turn on source
+    module.uart->regs.ier = 1;      // enable interrupts in uart peripheral
+
 }
 
 // static void flush_uart(void) {
 //     while ((module.uart->regs.usr & USR_BUSY) != 0) ;
 // }
 
-static bool haschar_uart(void) {
-    return (module.uart->regs.usr & USR_RX_NOT_EMPTY) != 0;
+
+void bt_ext_register_trigger(uint8_t byte, bt_ext_fn_t fn) {
+    assert(module.trigger[byte] == NULL);
+    module.trigger[byte] = fn;
 }
 
-static bool ringstrcmp(uint8_t *buf, size_t bufsize, int nbytes, const char *cmp, size_t cmplen) {
-    if (nbytes < cmplen) return false;
-
-    int base = (nbytes - cmplen) % bufsize;
-    for (int i = 0; i < cmplen; i++) {
-        if (buf[(base + i) % bufsize] != cmp[i])
-            return false;
-    }
-
-    return true;
-}
-
-static uint8_t recv_uart(void) {
-    static uint8_t ring[7] = { '\0' };
-    static int nbytes = 32;
-
-    uint8_t byte = module.uart->regs.rbr & 0xFF;
-
-    ring[nbytes % sizeof(ring)] = byte;
-    
-    if (ringstrcmp(ring, sizeof(ring), nbytes, CONNECTED_MESSAGE, sizeof(CONNECTED_MESSAGE) - 1)) {
-        module.connected = true;
-    } else if (ringstrcmp(ring, sizeof(ring), nbytes, LOST_MESSAGE, sizeof(LOST_MESSAGE) - 1)) {
-        module.connected = false;
-    }
-
-    return byte;
+void bt_ext_unregister_trigger(uint8_t byte) {
+    module.trigger[byte] = NULL;
 }
 
 static bool wait_response(uint8_t *buf, size_t len) {
@@ -162,8 +201,8 @@ static bool wait_response(uint8_t *buf, size_t len) {
 
     unsigned long start = timer_get_ticks();
     while (timer_get_ticks() - start < RESPONSE_TIMEOUT_USEC * TICKS_PER_USEC) {
-        if (haschar_uart()) {
-            uint8_t byte = recv_uart();
+        if (bt_ext_has_data()) {
+            uint8_t byte = dequeue_byte();
             if ((nbytes == 0 && byte != 'O') || (nbytes == 1 && byte != 'K'))
                 ok_response = false;
 
@@ -183,6 +222,8 @@ void bt_ext_init() {
         "AT+RESET",
         "AT+NOTI1",
     };
+    
+    module.rxbuf = rb_new();
 
     setup_uart();
 
@@ -240,19 +281,18 @@ void bt_ext_connect(const bt_ext_role_t role, const char *mac) {
 
 int bt_ext_read(uint8_t *buf, size_t len) {
     for (size_t i = 0; i < len - 1; i++) {
-        if (!haschar_uart()) {
+        if (!bt_ext_has_data()) {
             buf[i] = '\0';
             return i;
         }
-        uint8_t res = recv_uart();
-        buf[i] = res;
+        buf[i] = dequeue_byte();
     }
     buf[len - 1] = '\0';
     return len;
 }
 
 bool bt_ext_has_data() {
-    return haschar_uart();
+    return !rb_empty(module.rxbuf);
 }
 
 bool bt_ext_connected() {

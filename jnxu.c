@@ -1,7 +1,9 @@
-#include <assert.h>
+#include "assert.h"
+#include "strings.h"
 #include "jnxu.h"
 #include "bt_ext.h"
 #include "timer.h"
+#include "uart.h"
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -27,8 +29,11 @@
 
 #define MESSAGE_LEN     4096
 
+#define RECONNECT_TIMEOUT_MS 200
+#define RECONNECT_RETRIES 5
+
 enum message_state {
-    WAITING_FOR_START,
+    WAITING_FOR_START = 0,
     READING_COMMAND,
     IN_MESSAGE,
 };
@@ -46,6 +51,9 @@ static struct {
     uint8_t message[MESSAGE_LEN];
     int message_len;
 
+    bt_ext_role_t role;
+    char mac[13];
+
     unsigned long last_ping;
     unsigned long last_echo;
 } module;
@@ -55,8 +63,21 @@ void jnxu_register_handler(uint8_t cmd, jnxu_handler_t fn, void *aux_data) {
     module.handlers[cmd].aux_data = aux_data;
 }
 
+static bool ensure_connected() {
+    for (int i = 0; i < RECONNECT_RETRIES; i++) {
+        if (bt_ext_connected()) {
+            return true;
+        }
+
+        bt_ext_connect(module.role, module.mac);
+        timer_delay_ms(RECONNECT_TIMEOUT_MS);
+    }
+
+    return false;
+}
+
 bool jnxu_send(uint8_t cmd, const uint8_t *message, int len) {
-    if (!bt_ext_connected()) {
+    if (!ensure_connected()) {
         return false;
     }
 
@@ -89,8 +110,8 @@ bool jnxu_send(uint8_t cmd, const uint8_t *message, int len) {
     return true;
 }
 
-bool jnxu_ping() {
-    if (!bt_ext_connected()) {
+bool jnxu_ping(void) {
+    if (!ensure_connected()) {
         return false;
     }
 
@@ -131,15 +152,41 @@ static void process_byte(uint8_t byte) {
             default:
                 module.state = WAITING_FOR_START;
         }
+
+        if (module.state == READING_COMMAND)
+            module.state = WAITING_FOR_START;
+
     } else if (byte == '&') {
         module.saw_prefix = true;
     } else if (module.state == READING_COMMAND) {
         module.cmd = byte;
         module.state = IN_MESSAGE;
+        module.message_len = 0;
     } else if (module.state == IN_MESSAGE) {
 normal_process:
         assert(module.message_len < sizeof(module.message));
         module.message[module.message_len++] = byte;
     } // else ignore byte
+}
+
+static void process_uart(void) {
+    uint8_t buf[1024];
+    while (bt_ext_has_data()) {
+        int len = bt_ext_read(buf, sizeof(buf));
+        for (int i = 0; i < len; i++) {
+            process_byte(buf[i]);
+            
+            // TEST
+            uart_putchar(buf[i]);
+        }
+    }
+}
+
+void jnxu_init(bt_ext_role_t role, const char *mac) {
+    module.role = role;
+    memcpy(module.mac, mac, sizeof(module.mac));
+
+    bt_ext_init();
+    ensure_connected();
 }
 

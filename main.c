@@ -11,7 +11,12 @@
 #define RE_DATA GPIO_PD22
 #define RE_SW GPIO_PD21 // (button)
 
-void terminal_bluetooth(void) {
+#define MGPIA_MAC "685E1C4C31FD"
+#define MGPIB_MAC "685E1C4C0016"
+
+static void terminal_bluetooth(void) {
+    interrupts_init();
+    interrupts_global_enable();
     uart_init();
     bt_ext_init();
     char cmd[1024];
@@ -57,7 +62,4 @@ void terminal_bluetooth(void) {
 
 int main(void) {
     terminal_bluetooth();
-    while (true) {
-        read_move();
-    }
 }

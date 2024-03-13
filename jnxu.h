@@ -16,4 +16,6 @@ void jnxu_register_handler(uint8_t cmd, jnxu_handler_t fn, void *aux_data);
 
 bool jnxu_send(uint8_t cmd, const uint8_t *message, int len);
 
+bool jnxu_ping(void);
+
 #endif
