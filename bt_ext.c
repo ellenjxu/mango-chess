@@ -10,6 +10,7 @@
 #include "gpio.h"
 #include "gpio_extra.h"
 #include "interrupts.h"
+#include "printf.h"
 #include "strings.h"
 #include "timer.h"
 #include <stdint.h>
@@ -20,7 +21,7 @@
 #define UART_FN GPIO_FN_ALT7
 #define UART_INDEX 4
 
-#define RESPONSE_TIMEOUT_USEC 10 * 1000 // 10 ms, time for 12 bytes
+#define RESPONSE_TIMEOUT_USEC 100 * 1000 // 1000 ms
 #define RETRIES               3
 
 #define LCR_DLAB            (1 << 7)
@@ -28,6 +29,10 @@
 #define USR_TX_NOT_FULL     (1 << 1)
 #define USR_TX_NOT_EMPTY    (1 << 2)
 #define USR_RX_NOT_EMPTY    (1 << 3)
+
+#define CONNECTED_MESSAGE "OK+CONN"
+#define LOST_MESSAGE      "OK+LOST"
+
 
 #define SIZE(x) ((sizeof(x)) / (sizeof(*x)))
 
@@ -110,15 +115,15 @@ static void setup_uart() {
     module.uart->regs.ier = 0;    // disable interrupts
 }
 
-static void flush_uart(void) {
-    while ((module.uart->regs.usr & USR_BUSY) != 0) ;
-}
+// static void flush_uart(void) {
+//     while ((module.uart->regs.usr & USR_BUSY) != 0) ;
+// }
 
 static bool haschar_uart(void) {
     return (module.uart->regs.usr & USR_RX_NOT_EMPTY) != 0;
 }
 
-static bool ringstrcmp(uint8_t *buf, size_t bufsize, int nbytes, char *cmp, size_t cmplen) {
+static bool ringstrcmp(uint8_t *buf, size_t bufsize, int nbytes, const char *cmp, size_t cmplen) {
     if (nbytes < cmplen) return false;
 
     int base = (nbytes - cmplen) % bufsize;
@@ -131,9 +136,6 @@ static bool ringstrcmp(uint8_t *buf, size_t bufsize, int nbytes, char *cmp, size
 }
 
 static uint8_t recv_uart(void) {
-    static const char *CONNECTED_MESSAGE = "OK+CONN";
-    static const char *LOST_MESSAGE      = "OK+LOST";
-
     static uint8_t ring[7] = { '\0' };
     static int nbytes = 32;
 
@@ -141,9 +143,9 @@ static uint8_t recv_uart(void) {
 
     ring[nbytes % sizeof(ring)] = byte;
     
-    if (ringstrcmp(ring, sizeof(ring), nbytes, "OK+CONN", 7)) {
+    if (ringstrcmp(ring, sizeof(ring), nbytes, CONNECTED_MESSAGE, sizeof(CONNECTED_MESSAGE) - 1)) {
         module.connected = true;
-    } else if (ringstrcmp(ring, sizeof(ring), nbytes, "OK+LOST", 7)) {
+    } else if (ringstrcmp(ring, sizeof(ring), nbytes, LOST_MESSAGE, sizeof(LOST_MESSAGE) - 1)) {
         module.connected = false;
     }
 
@@ -153,7 +155,7 @@ static uint8_t recv_uart(void) {
 static bool wait_response(uint8_t *buf, size_t len) {
     assert(buf != NULL || len == 0);
 
-    if (len > 0) buf[0] = '\n';
+    if (len > 0) buf[0] = '\0';
 
     int nbytes = 0;
     bool ok_response = true;
@@ -207,12 +209,12 @@ void bt_ext_send_raw_byte(const uint8_t byte) {
 }
 
 bool bt_ext_send_cmd(const char *str, uint8_t *response, size_t len) {
+    if (str == NULL) return false;
+
     for (int i = 0; i < RETRIES; i++) {
         bt_ext_send_raw_str(str);
-        if (response != NULL) {
-            if (wait_response(response, len)) {
-                return true;
-            }
+        if (wait_response(response, len)) {
+            return true;
         }
     }
 
@@ -256,3 +258,4 @@ bool bt_ext_has_data() {
 bool bt_ext_connected() {
     return module.connected;
 }
+

@@ -1,6 +1,7 @@
 #include <assert.h>
 #include "jnxu.h"
 #include "bt_ext.h"
+#include "timer.h"
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -37,12 +38,16 @@ static struct {
         jnxu_handler_t fn;
         void *aux_data;
     } handlers[NUM_CMDS];
+
     enum message_state state;
     bool saw_prefix;
 
     uint8_t cmd;
     uint8_t message[MESSAGE_LEN];
     int message_len;
+
+    unsigned long last_ping;
+    unsigned long last_echo;
 } module;
 
 void jnxu_register_handler(uint8_t cmd, jnxu_handler_t fn, void *aux_data) {
@@ -84,6 +89,18 @@ bool jnxu_send(uint8_t cmd, const uint8_t *message, int len) {
     return true;
 }
 
+bool jnxu_ping() {
+    if (!bt_ext_connected()) {
+        return false;
+    }
+
+    module.last_ping = timer_get_ticks();
+    bt_ext_send_raw_byte(JNXU_PREFIX);
+    bt_ext_send_raw_byte(JNXU_PING);
+
+    return true;
+}
+
 static void process_byte(uint8_t byte) {
     if (module.saw_prefix) {
         module.saw_prefix = false;
@@ -102,7 +119,7 @@ static void process_byte(uint8_t byte) {
                 bt_ext_send_raw_byte(JNXU_ECHO);
                 break;
             case JNXU_ECHO:
-                // TODO
+                module.last_echo = timer_get_ticks();
                 break;
             case JNXU_STUFFING:
                 // do nothing (see above for explanation)
