@@ -62,4 +62,8 @@ static void terminal_bluetooth(void) {
 
 int main(void) {
     terminal_bluetooth();
+    uart_init();
+    bt_ext_init();
+    // terminal_bluetooth();
+    chess_game();
 }

@@ -4,9 +4,10 @@
 #include "uart.h"
 #include "malloc.h"
 #include "printf.h"
+#include "strings.h"
 
-unsigned char* read_move(void) {
-    unsigned char* move = malloc(8 * sizeof(char));
+char* read_move(void) {
+    char* move = malloc(8 * sizeof(char));
 
     int i=0;
     char ch;
@@ -19,10 +20,19 @@ unsigned char* read_move(void) {
             break;
         }
     }
-    printf("%s", move);
     return move;
 }
 
-void send_move(char* move) {
-    
+void send_move(const char* move) {
+    uart_putstring(move);
+}
+
+void chess_game(void) {
+    uart_putstring("GAME_BEGIN\n");
+    while (true) {
+        char* start = read_move();
+        if (strcmp(start, "READY\n") == 0) break;
+    }
+    send_move("e2e4\n");
+    read_move();
 }
