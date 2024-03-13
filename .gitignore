@@ -1,3 +1,5 @@
+main.c
+
 # no track build products
 *.a
 *.bin
