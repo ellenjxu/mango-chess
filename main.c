@@ -1,5 +1,6 @@
 #include "gpio.h"
 #include "interrupts.h"
+#include "jnxu.h"
 #include "uart.h"
 #include "re.h"
 #include "printf.h"
@@ -60,10 +61,28 @@ static void terminal_bluetooth(void) {
     }
 }
 
-int main(void) {
-    terminal_bluetooth();
+static void handle_message(void *data, const uint8_t *bytes, size_t len) {
+    uart_putstring("Received: ");
+    for (int i = 0; i < len; i++) {
+        uart_putchar(bytes[i]);
+    }
+    uart_putchar('\n');
+}
+
+static void jnxu_test(void) {
+    interrupts_init();
+    interrupts_global_enable();
     uart_init();
-    bt_ext_init();
+    jnxu_init(BT_EXT_ROLE_PRIMARY, MGPIB_MAC);
+    jnxu_register_handler(1, handle_message, NULL);
+
+    while (1) {
+        // spin
+    }
+}
+
+int main(void) {
+    jnxu_test();
     // terminal_bluetooth();
-    chess_game();
+    // chess_game();
 }

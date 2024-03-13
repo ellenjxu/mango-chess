@@ -14,6 +14,7 @@
 #include "ringbuffer.h"
 #include "strings.h"
 #include "timer.h"
+#include "uart.h"
 #include <stdint.h>
 #include <stddef.h>
 
@@ -129,6 +130,8 @@ static void handle_interrupt(uintptr_t pc, void *data) {
         if (module.trigger[byte_integer] != NULL) {
             module.trigger[byte_integer]();
         }
+
+        module.last_rx = timer_get_ticks();
     }
 }
 
@@ -174,7 +177,6 @@ static void setup_uart() {
     interrupts_register_handler(src, handle_interrupt, NULL); // install handler
     interrupts_enable_source(src);  // turn on source
     module.uart->regs.ier = 1;      // enable interrupts in uart peripheral
-
 }
 
 // static void flush_uart(void) {
@@ -251,6 +253,8 @@ void bt_ext_send_raw_byte(const uint8_t byte) {
 
 bool bt_ext_send_cmd(const char *str, uint8_t *response, size_t len) {
     if (str == NULL) return false;
+
+    printf("Sending command: %s\n", str);
 
     for (int i = 0; i < RETRIES; i++) {
         bt_ext_send_raw_str(str);

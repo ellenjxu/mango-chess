@@ -1,6 +1,7 @@
 #ifndef JNXU_H
 #define JNXU_H
 
+#include "bt_ext.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -10,12 +11,14 @@
 // The aux_data is a pointer to the data that the handler needs to do its job
 // (similarly to interrupts). The byte array contains the data in the packet.
 // The handler is responsible for freeing the buffer.
-typedef void (*jnxu_handler_t)(void *, uint8_t *, size_t);
+typedef void (*jnxu_handler_t)(void *, const uint8_t *, size_t);
 
 void jnxu_register_handler(uint8_t cmd, jnxu_handler_t fn, void *aux_data);
 
 bool jnxu_send(uint8_t cmd, const uint8_t *message, int len);
 
 bool jnxu_ping(void);
+
+void jnxu_init(bt_ext_role_t role, const char *mac);
 
 #endif
