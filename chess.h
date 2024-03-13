@@ -8,8 +8,8 @@
  * Author: Javier Garcia Nieto <jgnieto@stanford.edu>
  */
 
-char* read_move();
-void send_move(const char* move);
-void chess_game(void);
+char* chess_predict();
+void chess_send_move(const char* move);
+void chess_init(void);
 
 #endif

@@ -65,5 +65,5 @@ int main(void) {
     uart_init();
     bt_ext_init();
     // terminal_bluetooth();
-    chess_game();
+    chess_init();
 }
