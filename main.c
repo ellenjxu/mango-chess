@@ -5,6 +5,7 @@
 #include "printf.h"
 #include "bt_ext.h"
 #include <stdint.h>
+#include "chess.h"
 
 #define RE_CLOCK GPIO_PB0
 #define RE_DATA GPIO_PD22
@@ -13,10 +14,6 @@
 void terminal_bluetooth(void) {
     uart_init();
     bt_ext_init();
-    gpio_init();
-    interrupts_init();
-
-    interrupts_global_enable();
     char cmd[1024];
     int cmd_len = 0;
     uint8_t result[1024];
@@ -60,4 +57,7 @@ void terminal_bluetooth(void) {
 
 int main(void) {
     terminal_bluetooth();
+    while (true) {
+        read_move();
+    }
 }
