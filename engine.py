@@ -6,8 +6,9 @@ stockfish = Stockfish(path="/usr/bin/stockfish")
 
 def get_move():
     while True:
-        move = ser.readline().decode('utf-8').strip()
-        if move:
+        start = ser.readline().decode('utf-8').strip()
+        if start == "MOVE_BEGIN":
+            move = ser.readline().decode('utf-8').strip()
             break
     print(move)
     return move

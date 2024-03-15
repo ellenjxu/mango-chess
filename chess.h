@@ -8,7 +8,7 @@
  * Author: Javier Garcia Nieto <jgnieto@stanford.edu>
  */
 
-char* chess_predict();
+char* chess_get_move();
 void chess_send_move(const char* move);
 void chess_init(void);
 

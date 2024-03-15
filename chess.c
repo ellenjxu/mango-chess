@@ -6,7 +6,7 @@
 #include "printf.h"
 #include "strings.h"
 
-char* chess_predict(void) {
+char* chess_get_move(void) {
     char* move = malloc(8 * sizeof(char));
 
     int i=0;
@@ -24,15 +24,17 @@ char* chess_predict(void) {
 }
 
 void chess_send_move(const char* move) {
+    /* Sends a move (\n terminated)*/
+    uart_putstring("MOVE_BEGIN\n");
     uart_putstring(move);
 }
 
-void chess_init(void) {
+void chess_init(bool is_white) {
     uart_putstring("GAME_BEGIN\n");
     while (true) {
-        char* start = chess_predict();
+        char* start = chess_get_move();
         if (strcmp(start, "READY\n") == 0) break;
     }
     chess_send_move("e2e4\n");
-    chess_predict();
+    chess_get_move();
 }
