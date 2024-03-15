@@ -188,5 +188,7 @@ void jnxu_init(bt_ext_role_t role, const char *mac) {
 
     bt_ext_init();
     ensure_connected();
+
+    bt_ext_register_trigger(JNXU_PREFIX, process_uart);
 }
 

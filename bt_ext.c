@@ -23,7 +23,7 @@
 #define UART_FN GPIO_FN_ALT7
 #define UART_INDEX 4
 
-#define RESPONSE_TIMEOUT_USEC 100 * 1000 // 1000 ms
+#define RESPONSE_TIMEOUT_USEC (100 * 1000) // 100 ms
 #define RETRIES               3
 
 #define LCR_DLAB            (1 << 7)
@@ -32,6 +32,7 @@
 #define USR_TX_NOT_EMPTY    (1 << 2)
 #define USR_RX_NOT_EMPTY    (1 << 3)
 
+#define CONNECTED_MESSAGE_TIMEOUT_USEC (10 * 1000) // 10 ms
 #define CONNECTED_MESSAGE "OK+CONN"
 #define LOST_MESSAGE      "OK+LOST"
 
@@ -71,7 +72,10 @@ static struct {
     volatile uart_t *uart;
 
     bt_ext_role_t role;
-    bool connected;
+    volatile bool connected;
+
+    bt_ext_role_t board_role; // role the board is set to currently
+    bool role_is_set; // whether the role has been set or not
 
     rb_t *rxbuf;
 
@@ -79,6 +83,11 @@ static struct {
 
     volatile unsigned long last_rx;
 } module;
+
+static struct {
+    int nbytes;
+    uint8_t buf[32];
+} ring;
 
 static bool haschar_uart(void) {
     return (module.uart->regs.usr & USR_RX_NOT_EMPTY) != 0;
@@ -104,20 +113,35 @@ static bool ringstrcmp(uint8_t *buf, size_t bufsize, int nbytes, const char *cmp
     return true;
 }
 
-static uint8_t recv_uart(void) {
-    static uint8_t ring[7] = { '\0' };
-    static int nbytes = 32;
+static bool did_connect() {
+    uint8_t last = ring.buf[(ring.nbytes - 1) - sizeof(ring.buf)];
+    switch (last) {
+        // OK+CONNA, OK+CONNE, OK+CONNF each has its own meaning, and do not
+        // indicate a connection has been established. The whole reason we need
+        // a function to check for OK+CONN but not for OK+LOST it to filter out
+        // these cases.
+        case 'A':
+        case 'E':
+        case 'F':
+            if (timer_get_ticks() - module.last_rx < CONNECTED_MESSAGE_TIMEOUT_USEC * TICKS_PER_USEC)
+                break;
+        default:
+            return ringstrcmp(ring.buf, sizeof(ring.buf), ring.nbytes - 1, CONNECTED_MESSAGE, sizeof(CONNECTED_MESSAGE) - 1);
+    }
+    return true;
+}
 
+static uint8_t recv_uart(void) {
     uint8_t byte = module.uart->regs.rbr & 0xFF;
 
-    ring[nbytes % sizeof(ring)] = byte;
-    
-    // FIXME: ensure we check for OK+CONN but discard OK+CONNE etc.
-    if (ringstrcmp(ring, sizeof(ring), nbytes, CONNECTED_MESSAGE, sizeof(CONNECTED_MESSAGE) - 1)) {
+    ring.buf[ring.nbytes++ % sizeof(ring.buf)] = byte;
+
+    if (did_connect()) {
         module.connected = true;
-    } else if (ringstrcmp(ring, sizeof(ring), nbytes, LOST_MESSAGE, sizeof(LOST_MESSAGE) - 1)) {
+    } else if (ringstrcmp(ring.buf, sizeof(ring.buf), ring.nbytes, LOST_MESSAGE, sizeof(LOST_MESSAGE) - 1)) {
         module.connected = false;
     }
+
 
     return byte;
 }
@@ -125,15 +149,148 @@ static uint8_t recv_uart(void) {
 static void handle_interrupt(uintptr_t pc, void *data) {
     while (haschar_uart()) {
         uint8_t byte = recv_uart();
+        module.last_rx = timer_get_ticks();
+
         int byte_integer = 0xFF & byte;
         rb_enqueue(module.rxbuf, byte);
 
         if (module.trigger[byte_integer] != NULL) {
             module.trigger[byte_integer]();
         }
-
-        module.last_rx = timer_get_ticks();
     }
+}
+
+// static void flush_uart(void) {
+//     while ((module.uart->regs.usr & USR_BUSY) != 0) ;
+// }
+
+void bt_ext_register_trigger(uint8_t byte, bt_ext_fn_t fn) {
+    assert(module.trigger[byte] == NULL);
+    module.trigger[byte] = fn;
+}
+
+void bt_ext_unregister_trigger(uint8_t byte) {
+    module.trigger[byte] = NULL;
+}
+
+static bool wait_response(uint8_t *buf, size_t len) {
+    assert(buf != NULL || len == 0);
+
+    if (len > 0) buf[0] = '\0';
+
+    int nbytes = 0;
+    bool ok_response = true;
+
+    unsigned long start = timer_get_ticks();
+    while (timer_get_ticks() - start < RESPONSE_TIMEOUT_USEC * TICKS_PER_USEC) {
+        if (bt_ext_has_data()) {
+            uint8_t byte = dequeue_byte();
+            if ((nbytes == 0 && byte != 'O') || (nbytes == 1 && byte != 'K'))
+                ok_response = false;
+
+            if (++nbytes < len) {
+                buf[nbytes - 1] = byte;
+                buf[nbytes] = '\0';
+            }
+        }
+    }
+
+    return nbytes >= 2 && ok_response;
+}
+
+void bt_ext_send_raw_str(const char *buf) {
+    while (*buf) {
+        bt_ext_send_raw_byte(*buf++);
+    }
+}
+
+void bt_ext_send_raw_array(const uint8_t *buf, size_t len) {
+    for (size_t i = 0; i < len; i++) {
+        bt_ext_send_raw_byte(buf[i]);
+    }
+}
+
+void bt_ext_send_raw_byte(const uint8_t byte) {
+    while ((module.uart->regs.usr & USR_TX_NOT_FULL) == 0) ;
+    module.uart->regs.thr = byte;
+}
+
+bool bt_ext_send_cmd(const char *str, uint8_t *response, size_t len) {
+    if (str == NULL) return false;
+
+    printf("Sending command: %s\n", str);
+
+    for (int i = 0; i < RETRIES; i++) {
+        bt_ext_send_raw_str(str);
+        if (wait_response(response, len)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+static bool ensure_role(void) {
+    static const char *ROLE_COMMANDS[] = { "AT+ROLE0", "AT+ROLE1" };
+    static const char *ROLE_RESPONSES[] = { "OK+ROLE0", "OK+ROLE1" };
+
+    if (module.role != module.board_role || !module.role_is_set) {
+        bt_ext_send_cmd("AT", NULL, 0);
+
+        uint8_t response[256];
+        bool ret = bt_ext_send_cmd(ROLE_COMMANDS[module.role], response, sizeof(response));
+
+        if (ret && strcmp((char *)response, ROLE_RESPONSES[module.role]) == 0) {
+            module.board_role = module.role;
+            module.role_is_set = true;
+            return true;
+        } else {
+            return false;
+        }
+    } else {
+        return true;
+    }
+}
+
+void bt_ext_connect(const bt_ext_role_t role, const char *mac) {
+    module.role = role;
+
+    if (!ensure_role())
+        return;
+
+    if (module.role == BT_EXT_ROLE_PRIMARY) {
+        char buf[32];
+        buf[0] = '\0';
+        strlcat(buf, "AT+CON", sizeof(buf));
+        strlcat(buf, mac, sizeof(buf));
+        bt_ext_send_cmd(buf, NULL, 0);
+    } // SUBORDINATE does not need to connect, just wait
+}
+
+int bt_ext_read(uint8_t *buf, size_t len) {
+    for (size_t i = 0; i < len - 1; i++) {
+        if (!bt_ext_has_data()) {
+            buf[i] = '\0';
+            return i;
+        }
+        buf[i] = dequeue_byte();
+    }
+    buf[len - 1] = '\0';
+    return len;
+}
+
+bool bt_ext_has_data() {
+    return !rb_empty(module.rxbuf);
+}
+
+bool bt_ext_connected() {
+    if (!module.connected &&
+            timer_get_ticks() - module.last_rx > CONNECTED_MESSAGE_TIMEOUT_USEC * TICKS_PER_USEC &&
+            ringstrcmp(ring.buf, sizeof(ring.buf), ring.nbytes, CONNECTED_MESSAGE, sizeof(CONNECTED_MESSAGE) - 1)) {
+        module.connected = true;
+    }
+
+    return module.connected;
 }
 
 static void setup_uart() {
@@ -180,45 +337,6 @@ static void setup_uart() {
     module.uart->regs.ier = 1;      // enable interrupts in uart peripheral
 }
 
-// static void flush_uart(void) {
-//     while ((module.uart->regs.usr & USR_BUSY) != 0) ;
-// }
-
-
-void bt_ext_register_trigger(uint8_t byte, bt_ext_fn_t fn) {
-    assert(module.trigger[byte] == NULL);
-    module.trigger[byte] = fn;
-}
-
-void bt_ext_unregister_trigger(uint8_t byte) {
-    module.trigger[byte] = NULL;
-}
-
-static bool wait_response(uint8_t *buf, size_t len) {
-    assert(buf != NULL || len == 0);
-
-    if (len > 0) buf[0] = '\0';
-
-    int nbytes = 0;
-    bool ok_response = true;
-
-    unsigned long start = timer_get_ticks();
-    while (timer_get_ticks() - start < RESPONSE_TIMEOUT_USEC * TICKS_PER_USEC) {
-        if (bt_ext_has_data()) {
-            uint8_t byte = dequeue_byte();
-            if ((nbytes == 0 && byte != 'O') || (nbytes == 1 && byte != 'K'))
-                ok_response = false;
-
-            if (++nbytes < len) {
-                buf[nbytes - 1] = byte;
-                buf[nbytes] = '\0';
-            }
-        }
-    }
-
-    return nbytes >= 2 && ok_response;
-}
-
 void bt_ext_init() {
     static const char *CONFIG_COMMANDS[] = {
         "AT",
@@ -227,80 +345,12 @@ void bt_ext_init() {
     };
     
     module.rxbuf = rb_new();
-
+    ring.nbytes = sizeof(ring.buf);
     setup_uart();
 
     for (int i = 0; i < SIZE(CONFIG_COMMANDS); i++) {
         bt_ext_send_cmd(CONFIG_COMMANDS[i], NULL, 0);
     }
+
+    module.role_is_set = false;
 }
-
-void bt_ext_send_raw_str(const char *buf) {
-    while (*buf) {
-        bt_ext_send_raw_byte(*buf++);
-    }
-}
-
-void bt_ext_send_raw_array(const uint8_t *buf, size_t len) {
-    for (size_t i = 0; i < len; i++) {
-        bt_ext_send_raw_byte(buf[i]);
-    }
-}
-
-void bt_ext_send_raw_byte(const uint8_t byte) {
-    while ((module.uart->regs.usr & USR_TX_NOT_FULL) == 0) ;
-    module.uart->regs.thr = byte;
-}
-
-bool bt_ext_send_cmd(const char *str, uint8_t *response, size_t len) {
-    if (str == NULL) return false;
-
-    printf("Sending command: %s\n", str);
-
-    for (int i = 0; i < RETRIES; i++) {
-        bt_ext_send_raw_str(str);
-        if (wait_response(response, len)) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-void bt_ext_connect(const bt_ext_role_t role, const char *mac) {
-    static const char *ROLE_COMMANDS[] = { "AT+ROLE0", "AT+ROLE1" };
-
-    module.role = role;
-
-    bt_ext_send_cmd("AT", NULL, 0);
-    bt_ext_send_cmd(ROLE_COMMANDS[role], NULL, 0);
-
-    if (role == BT_EXT_ROLE_PRIMARY) {
-        char buf[32];
-        buf[0] = '\0';
-        strlcat(buf, "AT+CON", sizeof(buf));
-        strlcat(buf, mac, sizeof(buf));
-        bt_ext_send_cmd(buf, NULL, 0);
-    } // SUBORDINATE does not need to connect, just wait
-}
-
-int bt_ext_read(uint8_t *buf, size_t len) {
-    for (size_t i = 0; i < len - 1; i++) {
-        if (!bt_ext_has_data()) {
-            buf[i] = '\0';
-            return i;
-        }
-        buf[i] = dequeue_byte();
-    }
-    buf[len - 1] = '\0';
-    return len;
-}
-
-bool bt_ext_has_data() {
-    return !rb_empty(module.rxbuf);
-}
-
-bool bt_ext_connected() {
-    return module.connected;
-}
-
