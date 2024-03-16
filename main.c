@@ -7,6 +7,8 @@
 #include "uart.h"
 #include <stdint.h>
 #include "chess.h"
+#include "chess_gui.h"
+#include "gl.h"
 
 #define RE_CLOCK GPIO_PB0
 #define RE_DATA GPIO_PD22
@@ -92,4 +94,12 @@ int main(void) {
     jnxu_test();
     // terminal_bluetooth();
     // chess_game();
+    // terminal_bluetooth();
+    uart_init();
+    // bt_ext_init();
+    // terminal_bluetooth();
+    // chess_init();
+
+    uart_putstring("Drawing board\n");
+    chess_gui_init();
 }

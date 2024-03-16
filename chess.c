@@ -6,12 +6,12 @@
 #include "printf.h"
 #include "strings.h"
 
-char* read_move(void) {
-    char* move = malloc(8 * sizeof(char));
+char *chess_get_move(void) {
+    char *move = malloc(8 * sizeof(char));
 
-    int i=0;
+    int i = 0;
     char ch;
-    while (true) {
+    while (1) {
         ch = uart_getchar();
         move[i++] = ch;
         
@@ -23,16 +23,18 @@ char* read_move(void) {
     return move;
 }
 
-void send_move(const char* move) {
+void chess_send_move(const char* move) {
+    /* Sends a move (\n terminated)*/
+    uart_putstring("MOVE_BEGIN\n");
     uart_putstring(move);
 }
 
-void chess_game(void) {
+void chess_init() { // TODO: white or black
     uart_putstring("GAME_BEGIN\n");
     while (true) {
-        char* start = read_move();
+        char* start = chess_get_move();
         if (strcmp(start, "READY\n") == 0) break;
     }
-    send_move("e2e4\n");
-    read_move();
+    chess_send_move("e2e4\n");
+    chess_get_move();
 }
