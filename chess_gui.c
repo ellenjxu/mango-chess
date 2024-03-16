@@ -16,8 +16,20 @@
 
 #define SCREEN_WIDTH 800
 #define SCREEN_HEIGHT 600
+
+// Options: CHESS_COM_GREEN, CHESS_COM_BLUE, MANGO
+#define THEME MANGO
+
+#if THEME == MANGO
+#define CHESS_BLACK gl_color(188, 81, 150)
+#define CHESS_WHITE gl_color(243, 216, 95)
+#elif THEME == CHESS_COM_BLUE
+#define CHESS_BLACK gl_color( 84, 114, 150)
+#define CHESS_WHITE gl_color(234, 233, 212)
+#else
 #define CHESS_BLACK gl_color(124, 149, 93)
 #define CHESS_WHITE gl_color(238, 238, 213)
+#endif
 
 // initialize
 static int board[CHESS_SIZE][CHESS_SIZE] = {
