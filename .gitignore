@@ -16,3 +16,6 @@
 \#*\#
 .\#*
 **/.vscode/**
+
+# python venv
+**/.venv/**
