@@ -8,9 +8,13 @@ STOCKFISH_PATH = "/usr/bin/stockfish"
 SERIAL_PORT = "/dev/ttyUSB0"
 
 if platform.startswith("darwin"):
+    print("Hi Javier!")
+
     # Javier's config
     STOCKFISH_PATH = "/opt/homebrew/bin/stockfish"
     SERIAL_PORT = "/dev/tty.usbserial-0001"
+else:
+    print("Hi Ellen!")
 
 stockfish = Stockfish(path=STOCKFISH_PATH)
 
@@ -38,8 +42,9 @@ with serial.Serial(SERIAL_PORT, 115200, timeout=1) as ser:
 
             if best_move is None:
                 best_move = "MATE"
+            else:
+                stockfish.make_moves_from_current_position([best_move])
 
-            stockfish.make_moves_from_current_position([best_move])
             print(best_move)
             best_move += "\n"
             ser.write(best_move.encode())
