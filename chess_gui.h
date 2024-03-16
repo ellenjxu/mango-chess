@@ -15,7 +15,7 @@
 
 enum { XX = 0, WP, WN, WB, WR, WQ, WK, BP, BN, BB, BR, BQ, BK };
 
-void chess_gui_draw(int b[CHESS_SIZE][CHESS_SIZE]);
+void chess_gui_draw(void);
 void chess_gui_update(const char* move);
 void chess_gui_print(void);
 void chess_gui_init(void);

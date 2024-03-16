@@ -14,8 +14,7 @@ void brain(void) {
     interrupts_init();
     interrupts_global_enable();
     uart_init();
-    bt_ext_init();
-    chess_init();
+    // chess_init();
     
     chess_gui_init();
 
