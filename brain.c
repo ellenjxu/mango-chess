@@ -18,20 +18,9 @@ void brain(void) {
 
     chess_gui_init();
 
+    chess_gui_print();
     timer_delay(5);
-
-    chess_gui_update("d2d4\n");
-    timer_delay(1);
-    chess_gui_update("g1f3\n");
-    timer_delay(1);
-    chess_gui_update("g2g3\n");
-    timer_delay(1);
-    chess_gui_update("f1g2\n");
-    timer_delay(1);
-    chess_gui_update("e1g1\n");
-    timer_delay(1);
-    // chess_gui_init();
-
+    chess_gui_update("e8g8\n");
 
     while (1) {}
 }
