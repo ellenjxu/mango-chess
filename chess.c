@@ -29,7 +29,7 @@ void chess_send_move(const char* move) {
     uart_putstring(move);
 }
 
-void chess_init() { // TODO: white or black
+void chess_init(void) { // TODO: white or black
     uart_putstring("GAME_BEGIN\n");
     while (true) {
         char* start = chess_get_move();

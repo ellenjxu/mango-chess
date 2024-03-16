@@ -14,6 +14,11 @@
 #include "gpio_interrupt.h"
 #include "timer.h"
 
+#define SCREEN_WIDTH 800
+#define SCREEN_HEIGHT 600
+#define CHESS_BLACK gl_color(124, 149, 93)
+#define CHESS_WHITE gl_color(238, 238, 213)
+
 // initialize
 static int board[CHESS_SIZE][CHESS_SIZE] = {
     {WR, WN, WB, WQ, WK, WB, WN, WR},
@@ -28,19 +33,18 @@ static int board[CHESS_SIZE][CHESS_SIZE] = {
 
 void chess_gui_draw(int b[CHESS_SIZE][CHESS_SIZE]) {
     // draw the chess board
-    printf("hi");
+    int s = SCREEN_HEIGHT/8 > SCREEN_WIDTH/8 ? SCREEN_WIDTH/8 : SCREEN_HEIGHT/8;
+
     for (int i = 0; i < 8; i++) {
         for (int j = 0; j < 8; j++) {
             if ((i + j) % 2 == 0) {
-                gl_draw_rect(50*i, 50*j, 50, 50, GL_GREEN);
+                gl_draw_rect(s*i, s*j, s, s, CHESS_WHITE);
             }
             else {
-                gl_draw_rect(50*i, 50 * j, 50, 50, GL_YELLOW);
+                gl_draw_rect(s*i, s*j, s, s, CHESS_BLACK);
             }
         }
     }
-
-    // TODO: print the piece name using board array
 }
 
 void chess_gui_update(const char* move) {
@@ -63,18 +67,18 @@ void chess_gui_print(void) {
 
 void chess_gui_init(void) {
 
-    const int WIDTH = 300;
-    const int HEIGHT = 300;
-
-    gl_init(WIDTH, HEIGHT, GL_DOUBLEBUFFER);
+    gl_init(SCREEN_WIDTH, SCREEN_HEIGHT, GL_DOUBLEBUFFER);
 
     uart_putstring("Clearing screen\n");
     gl_clear(GL_WHITE); 
     gl_swap_buffer();
-    gl_draw_rect(0, 0, 50, 50, GL_GREEN);
-    gl_swap_buffer();
 
     uart_putstring("Done\n");
 
-    // chess_gui_draw(board);
+    chess_gui_draw(board);
+    gl_swap_buffer();
+
+    while (1) {
+
+    }
 }
