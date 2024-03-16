@@ -2,8 +2,7 @@
 #define BT_EXT_H
 
 /*
- * `bt_ext` is a module for interfacing with the HC-05 Bluetooth module over
- * UART.
+ * Module for interfacing with the HC-05 Bluetooth module over UART.
  *
  * Author: Javier Garcia Nieto <jgnieto@stanford.edu>
  *

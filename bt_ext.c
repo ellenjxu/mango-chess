@@ -1,5 +1,5 @@
 /*
- * Module to control HM-10 Bluetooth module.
+ * Module to control HM-10 Bluetooth module over UART.
  *
  * Author: Javier Garcia Nieto <jgnieto@stanford.edu>
  * Uart code adapted from provided uart.c module (by Julie Zelenski).

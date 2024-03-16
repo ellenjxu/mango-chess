@@ -1,7 +1,8 @@
 /*
- * This module implements a simple protocol for sending messages over Bluetooth.
- * The protocol is designed to be simple and robust. See header file for a
- * detailed description of the protocol.
+ * Module implementing the JNXU protocol, a simple protocol for sending messages
+ * over UART. The protocol is designed to be used in a non-blocking manner,
+ * alongside bt_ext, but can be easily modified to use a similar module for
+ * a different communication medium.
  *
  * Author: Javier Garcia Nieto <jgnieto@stanford.edu>
  */
@@ -42,11 +43,12 @@ static struct {
     bt_ext_role_t role;
     char mac[13];
 
-    unsigned long last_ping;
-    unsigned long last_echo;
+    volatile unsigned long last_ping;
+    volatile unsigned long last_echo;
 } module;
 
 void jnxu_register_handler(uint8_t cmd, jnxu_handler_t fn, void *aux_data) {
+    assert(cmd != JNXU_PREFIX);
     module.handlers[cmd].fn = fn;
     module.handlers[cmd].aux_data = aux_data;
 }
@@ -58,6 +60,7 @@ void jnxu_register_handler(uint8_t cmd, jnxu_handler_t fn, void *aux_data) {
  * @return  `true` if the device is connected, `false` otherwise.
  */
 static bool ensure_connected(void) {
+    // TODO: set module to not connected if we have missed an echo
     for (int i = 0; i < RECONNECT_RETRIES; i++) {
         if (bt_ext_connected()) {
             return true;
@@ -79,6 +82,8 @@ static bool ensure_connected(void) {
 }
 
 bool jnxu_send(uint8_t cmd, const uint8_t *message, int len) {
+    assert(cmd != JNXU_PREFIX);
+
     if (!ensure_connected()) {
         return false;
     }
@@ -193,14 +198,14 @@ static void process_byte(uint8_t byte) {
                 // unknown character
                 module.state = WAITING_FOR_START;
         }
+    } else if (byte == JNXU_PREFIX) {
+        // saw prefix, write down for the next iteration
+        module.saw_prefix = true;
     } else if (module.state == READING_COMMAND) {
         // this byte is the command
         module.cmd = byte;
         module.state = IN_MESSAGE;
         module.message_len = 0;
-    } else if (byte == JNXU_PREFIX) {
-        // saw prefix, write down for the next iteration
-        module.saw_prefix = true;
     } else if (module.state == IN_MESSAGE) {
         // normal character, add to message
 normal_process:
