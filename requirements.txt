@@ -1,0 +1,2 @@
+pyserial==3.5
+stockfish==3.28.0
