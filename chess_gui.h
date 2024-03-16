@@ -13,7 +13,7 @@
 #define CHESS_SIZE 8
 #endif
 
-enum { XX = 0, WP, WN, WB, WR, WQ, WK, BP, BN, BB, BR, BQ, BK };
+typedef enum { XX = 0, WP, WN, WB, WR, WQ, WK, BP, BN, BB, BR, BQ, BK } chess_gui_piece_t;
 
 void chess_gui_draw(void);
 void chess_gui_update(const char* move);

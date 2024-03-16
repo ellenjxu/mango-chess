@@ -13,6 +13,9 @@
 extern void hand(void);
 extern void brain(void);
 
+#define MAIN  0
+#define BRAIN 1
+
 // BRAIN or HAND
 #define MODE BRAIN
 
