@@ -1,32 +1,20 @@
+/*
+ * This module implements a simple protocol for sending messages over Bluetooth.
+ * The protocol is designed to be simple and robust. See header file for a
+ * detailed description of the protocol.
+ *
+ * Author: Javier Garcia Nieto <jgnieto@stanford.edu>
+ */
 #include "assert.h"
 #include "strings.h"
 #include "jnxu.h"
 #include "bt_ext.h"
 #include "timer.h"
-#include <stdbool.h>
-#include <stdint.h>
 
-// Javier Nieto and Ellen Xu
-// ^      ^               ^^    = JNXU
-
-#define JNXU_PREFIX     '&'
-
-#define JNXU_START      'J'
-#define JNXU_END        'X'
-
-#define JNXU_PING       'P'
-#define JNXU_ECHO       'E'
-
-// Stuffing is used to avoid sending strings like "AT" or "OK", which could be
-// interpreted as AT commands or OK responses by the HC-05 module. Those strings
-// are replaced by "A&_T" and "O&_K" respectively. The receiver should ignore
-// the stuffing character and the underscore. If we wish to send "&_" itself,
-// we simply send "&&_" instead, which escapes the first ampersand.
-#define JNXU_STUFFING   '_'
+// Javier Garcia Nieto and Ellen Xu
+// ^             ^               ^^    = JNXU
 
 #define NUM_CMDS        256
-
-#define MESSAGE_LEN     4096
 
 #define RECONNECT_TIMEOUT_MS 200
 #define RECONNECT_RETRIES 5
@@ -47,7 +35,7 @@ static struct {
     volatile bool saw_prefix;
 
     uint8_t cmd;
-    uint8_t message[MESSAGE_LEN];
+    uint8_t message[JNXU_MAX_MESSAGE_LEN];
     int message_len;
 
     bt_ext_role_t role;
@@ -62,7 +50,7 @@ void jnxu_register_handler(uint8_t cmd, jnxu_handler_t fn, void *aux_data) {
     module.handlers[cmd].aux_data = aux_data;
 }
 
-static bool ensure_connected() {
+static bool ensure_connected(void) {
     for (int i = 0; i < RECONNECT_RETRIES; i++) {
         if (bt_ext_connected()) {
             return true;

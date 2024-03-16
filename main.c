@@ -1,10 +1,10 @@
+#include "bt_ext.h"
 #include "gpio.h"
 #include "interrupts.h"
 #include "jnxu.h"
-#include "uart.h"
-#include "re.h"
 #include "printf.h"
-#include "bt_ext.h"
+#include "re.h"
+#include "uart.h"
 #include <stdint.h>
 #include "chess.h"
 
