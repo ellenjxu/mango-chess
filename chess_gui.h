@@ -1,5 +1,5 @@
-#ifndef CHESS_H
-#define CHESS_H
+#ifndef CHESS_GUI_H
+#define CHESS_GUI_H
 
 /*
  * Module for chess GUI
@@ -9,19 +9,13 @@
  */
 
 #include <stddef.h>
+#define N 8
 
-enum { EMPTY = 0, WP, WN, WB, WR, WQ, WK, BP, BN, BB, BR, BQ, BK };
+enum { XX = 0, WP, WN, WB, WR, WQ, WK, BP, BN, BB, BR, BQ, BK };
 
-// initialize
-int board[8][8] = {
-    {WR, WN, WB, WQ, WK, WB, WN, WR},
-    {WP, WP, WP, WP, WP, WP, WP, WP},
-    {EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY},
-    {EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY},
-    {EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY},
-    {EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY},
-    {BP, BP, BP, BP, BP, BP, BP, BP},
-    {BR, BN, BB, BQ, BK, BB, BN, BR}
-};
+void draw_board(int b[N][N]);
+void update_board(const char* move);
+void print_board(void);
+void board_init(void);
 
 #endif
