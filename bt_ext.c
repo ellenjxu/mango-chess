@@ -10,11 +10,9 @@
 #include "gpio.h"
 #include "gpio_extra.h"
 #include "interrupts.h"
-#include "printf.h"
 #include "ringbuffer.h"
 #include "strings.h"
 #include "timer.h"
-#include "uart.h"
 #include <stdint.h>
 #include <stddef.h>
 
@@ -36,6 +34,7 @@
 #define CONNECTED_MESSAGE "OK+CONN"
 #define LOST_MESSAGE      "OK+LOST"
 
+#define ROLE_ENSURE_DELAY_MS 500 // 100 ms
 
 #define SIZE(x) ((sizeof(x)) / (sizeof(*x)))
 
@@ -114,7 +113,7 @@ static bool ringstrcmp(uint8_t *buf, size_t bufsize, int nbytes, const char *cmp
 }
 
 static bool did_connect() {
-    uint8_t last = ring.buf[(ring.nbytes - 1) - sizeof(ring.buf)];
+    uint8_t last = ring.buf[(ring.nbytes - 1) % sizeof(ring.buf)];
     switch (last) {
         // OK+CONNA, OK+CONNE, OK+CONNF each has its own meaning, and do not
         // indicate a connection has been established. The whole reason we need
@@ -128,7 +127,7 @@ static bool did_connect() {
         default:
             return ringstrcmp(ring.buf, sizeof(ring.buf), ring.nbytes - 1, CONNECTED_MESSAGE, sizeof(CONNECTED_MESSAGE) - 1);
     }
-    return true;
+    return false;
 }
 
 static uint8_t recv_uart(void) {
@@ -141,7 +140,6 @@ static uint8_t recv_uart(void) {
     } else if (ringstrcmp(ring.buf, sizeof(ring.buf), ring.nbytes, LOST_MESSAGE, sizeof(LOST_MESSAGE) - 1)) {
         module.connected = false;
     }
-
 
     return byte;
 }
@@ -218,8 +216,6 @@ void bt_ext_send_raw_byte(const uint8_t byte) {
 bool bt_ext_send_cmd(const char *str, uint8_t *response, size_t len) {
     if (str == NULL) return false;
 
-    printf("Sending command: %s\n", str);
-
     for (int i = 0; i < RETRIES; i++) {
         bt_ext_send_raw_str(str);
         if (wait_response(response, len)) {
@@ -231,14 +227,16 @@ bool bt_ext_send_cmd(const char *str, uint8_t *response, size_t len) {
 }
 
 static bool ensure_role(void) {
-    static const char *ROLE_COMMANDS[] = { "AT+ROLE0", "AT+ROLE1" };
-    static const char *ROLE_RESPONSES[] = { "OK+ROLE0", "OK+ROLE1" };
+    static const char *ROLE_COMMANDS[]  = { "AT+ROLE0", "AT+ROLE1" };
+    static const char *ROLE_RESPONSES[] = { "OK+Set:0", "OK+Set:1" };
 
     if (module.role != module.board_role || !module.role_is_set) {
         bt_ext_send_cmd("AT", NULL, 0);
 
         uint8_t response[256];
         bool ret = bt_ext_send_cmd(ROLE_COMMANDS[module.role], response, sizeof(response));
+
+        timer_delay_ms(ROLE_ENSURE_DELAY_MS);
 
         if (ret && strcmp((char *)response, ROLE_RESPONSES[module.role]) == 0) {
             module.board_role = module.role;
@@ -343,6 +341,8 @@ void bt_ext_init() {
         "AT+RESET",
         "AT+NOTI1",
     };
+
+    bt_ext_connected();
     
     module.rxbuf = rb_new();
     ring.nbytes = sizeof(ring.buf);

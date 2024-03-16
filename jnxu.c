@@ -3,7 +3,6 @@
 #include "jnxu.h"
 #include "bt_ext.h"
 #include "timer.h"
-#include "uart.h"
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -175,9 +174,6 @@ static void process_uart(void) {
         int len = bt_ext_read(buf, sizeof(buf));
         for (int i = 0; i < len; i++) {
             process_byte(buf[i]);
-            
-            // TEST
-            uart_putchar(buf[i]);
         }
     }
 }

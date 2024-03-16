@@ -77,6 +77,8 @@ static void jnxu_test(void) {
     jnxu_register_handler(1, handle_message, NULL);
 
     while (1) {
+        uint8_t buf[] = {'H', 'A', '!' };
+        // jnxu_send(1, buf, sizeof(buf));
         // spin
     }
 }
