@@ -43,8 +43,8 @@ static struct {
         void *aux_data;
     } handlers[NUM_CMDS];
 
-    enum message_state state;
-    bool saw_prefix;
+    volatile enum message_state state;
+    volatile bool saw_prefix;
 
     uint8_t cmd;
     uint8_t message[MESSAGE_LEN];
@@ -129,6 +129,10 @@ static void process_byte(uint8_t byte) {
                 module.state = READING_COMMAND;
                 break;
             case JNXU_END:
+                if (module.state != IN_MESSAGE) {
+                    module.state = WAITING_FOR_START;
+                    break;
+                }
                 module.state = WAITING_FOR_START;
                 if (module.handlers[module.cmd].fn != NULL) {
                     module.handlers[module.cmd].fn(module.handlers[module.cmd].aux_data, module.message, module.message_len);
@@ -151,12 +155,10 @@ static void process_byte(uint8_t byte) {
             default:
                 module.state = WAITING_FOR_START;
         }
-
+    } else if (byte == JNXU_PREFIX) {
+        module.saw_prefix = true;
         if (module.state == READING_COMMAND)
             module.state = WAITING_FOR_START;
-
-    } else if (byte == '&') {
-        module.saw_prefix = true;
     } else if (module.state == READING_COMMAND) {
         module.cmd = byte;
         module.state = IN_MESSAGE;
@@ -186,5 +188,9 @@ void jnxu_init(bt_ext_role_t role, const char *mac) {
     ensure_connected();
 
     bt_ext_register_trigger(JNXU_PREFIX, process_uart);
+    bt_ext_register_trigger(JNXU_START, process_uart);
+    bt_ext_register_trigger(JNXU_END, process_uart);
+    bt_ext_register_trigger(JNXU_PING, process_uart);
+    bt_ext_register_trigger(JNXU_ECHO, process_uart);
 }
 

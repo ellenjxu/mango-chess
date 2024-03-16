@@ -10,6 +10,7 @@
 #include "gpio.h"
 #include "gpio_extra.h"
 #include "interrupts.h"
+#include "printf.h"
 #include "ringbuffer.h"
 #include "strings.h"
 #include "timer.h"
@@ -33,6 +34,8 @@
 #define CONNECTED_MESSAGE_TIMEOUT_USEC (10 * 1000) // 10 ms
 #define CONNECTED_MESSAGE "OK+CONN"
 #define LOST_MESSAGE      "OK+LOST"
+
+#define MAX_BYTES_NO_TRIGGER 127
 
 #define ROLE_ENSURE_DELAY_MS 500 // 100 ms
 
@@ -73,12 +76,15 @@ static struct {
     bt_ext_role_t role;
     volatile bool connected;
 
+    volatile int bytes_since_last_trigger;
+
     bt_ext_role_t board_role; // role the board is set to currently
     bool role_is_set; // whether the role has been set or not
 
     rb_t *rxbuf;
 
     bt_ext_fn_t trigger[256];
+    bt_ext_fn_t fallback_trigger;
 
     volatile unsigned long last_rx;
 } module;
@@ -141,6 +147,8 @@ static uint8_t recv_uart(void) {
         module.connected = false;
     }
 
+    printf("%c", byte);
+
     return byte;
 }
 
@@ -154,6 +162,12 @@ static void handle_interrupt(uintptr_t pc, void *data) {
 
         if (module.trigger[byte_integer] != NULL) {
             module.trigger[byte_integer]();
+            module.bytes_since_last_trigger = 0;
+        } else if (module.bytes_since_last_trigger < MAX_BYTES_NO_TRIGGER) {
+            module.bytes_since_last_trigger++;
+        } else if (module.fallback_trigger != NULL) {
+            module.fallback_trigger();
+            module.bytes_since_last_trigger = 0;
         }
     }
 }
@@ -165,6 +179,10 @@ static void handle_interrupt(uintptr_t pc, void *data) {
 void bt_ext_register_trigger(uint8_t byte, bt_ext_fn_t fn) {
     assert(module.trigger[byte] == NULL);
     module.trigger[byte] = fn;
+}
+
+void bt_ext_register_fallback_trigger(bt_ext_fn_t fn) {
+    module.fallback_trigger = fn;
 }
 
 void bt_ext_unregister_trigger(uint8_t byte) {
@@ -211,6 +229,7 @@ void bt_ext_send_raw_array(const uint8_t *buf, size_t len) {
 void bt_ext_send_raw_byte(const uint8_t byte) {
     while ((module.uart->regs.usr & USR_TX_NOT_FULL) == 0) ;
     module.uart->regs.thr = byte;
+    printf("%c", byte);
 }
 
 bool bt_ext_send_cmd(const char *str, uint8_t *response, size_t len) {

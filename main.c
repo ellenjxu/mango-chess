@@ -15,6 +15,10 @@
 #define MGPIA_MAC "685E1C4C31FD"
 #define MGPIB_MAC "685E1C4C0016"
 
+/*
+ * This program allows us to send AT commands to the HC-05 module and receive
+ * the response.
+ */
 static void terminal_bluetooth(void) {
     interrupts_init();
     interrupts_global_enable();
@@ -73,8 +77,9 @@ static void jnxu_test(void) {
     interrupts_init();
     interrupts_global_enable();
     uart_init();
-    jnxu_init(BT_EXT_ROLE_PRIMARY, MGPIB_MAC);
+    jnxu_init(BT_EXT_ROLE_SUBORDINATE, MGPIB_MAC);
     jnxu_register_handler(1, handle_message, NULL);
+    jnxu_register_handler('a', handle_message, NULL);
 
     while (1) {
         uint8_t buf[] = {'H', 'A', '!' };

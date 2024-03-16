@@ -78,4 +78,12 @@ void bt_ext_register_trigger(uint8_t byte, bt_ext_fn_t fn);
  */
 void bt_ext_unregister_trigger(uint8_t byte);
 
+/*
+ * `bt_ext_register_fallback_trigger` registers a function to be called when too
+ * many bytes are received from the Bluetooth module and no trigger is found.
+ * This avoids the internal ringbuffer overflowing. (This trigger is called after
+ * 128 bytes are received and no trigger is found.)
+ */
+void bt_ext_register_fallback_trigger(bt_ext_fn_t fn);
+
 #endif
