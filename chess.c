@@ -6,12 +6,12 @@
 #include "printf.h"
 #include "strings.h"
 
-char* chess_get_move(void) {
-    char* move = malloc(8 * sizeof(char));
+char *chess_get_move(void) {
+    char *move = malloc(8 * sizeof(char));
 
-    int i=0;
+    int i = 0;
     char ch;
-    while (true) {
+    while (1) {
         ch = uart_getchar();
         move[i++] = ch;
         

@@ -2,20 +2,22 @@
 #define CHESS_GUI_H
 
 /*
- * Module for chess GUI
+ * Module for chess GUI. Displays a chess board on the screen. Includes
+ * function to update UI based on new move.
  *
  * Author: Ellen Xu <ellenjxu@stanford.edu>
  * Author: Javier Garcia Nieto <jgnieto@stanford.edu>
  */
 
-#include <stddef.h>
-#define N 8
+#ifndef CHESS_SIZE
+#define CHESS_SIZE 8
+#endif
 
 enum { XX = 0, WP, WN, WB, WR, WQ, WK, BP, BN, BB, BR, BQ, BK };
 
-void draw_board(int b[N][N]);
-void update_board(const char* move);
-void print_board(void);
-void board_init(void);
+void chess_gui_draw(int b[CHESS_SIZE][CHESS_SIZE]);
+void chess_gui_update(const char* move);
+void chess_gui_print(void);
+void chess_gui_init(void);
 
 #endif

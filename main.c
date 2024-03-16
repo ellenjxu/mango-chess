@@ -70,5 +70,5 @@ int main(void) {
     // chess_init();
 
     uart_putstring("Drawing board\n");
-    board_init();
+    chess_gui_init();
 }
