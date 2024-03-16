@@ -31,6 +31,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#define BT_EXT_MAX_BYTES_NO_TRIGGER 127
+
 typedef enum {
     BT_EXT_ROLE_SUBORDINATE = 0,    // BT docs: "slave"
     BT_EXT_ROLE_PRIMARY = 1,        // BT docs: "master"
@@ -138,8 +140,9 @@ void bt_ext_unregister_trigger(uint8_t byte);
 /*
  * `bt_ext_register_fallback_trigger` registers a function to be called when too
  * many bytes are received from the Bluetooth module and no trigger is found.
- * This avoids the internal ringbuffer overflowing. (This trigger is called after
- * 128 bytes are received and no trigger is found.)
+ * This avoids the internal ringbuffer overflowing. (This trigger is called
+ * after more than BT_EXT_MAX_BYTES_NO_TRIGGER bytes are received and no trigger
+ * is found.)
  *
  * @param fn    function to be called when the fallback trigger is triggered
  */

@@ -28,8 +28,6 @@
 #define CONNECTED_MESSAGE "OK+CONN"
 #define LOST_MESSAGE      "OK+LOST"
 
-#define MAX_BYTES_NO_TRIGGER 127
-
 #define ROLE_ENSURE_DELAY_MS 500
 
 #define SIZE(x) ((sizeof(x)) / (sizeof(*x)))
@@ -200,7 +198,7 @@ static uint8_t recv_uart(void) {
  * reads it and stores it in the ring buffer. If the character is a trigger
  * character, it calls the trigger function. If the character is not a trigger
  * character but the number of bytes since the last trigger is greater than
- * MAX_BYTES_NO_TRIGGER, it calls the fallback trigger function.
+ * BT_EXT_MAX_BYTES_NO_TRIGGER, it calls the fallback trigger function.
  */
 static void handle_interrupt(uintptr_t pc, void *data) {
     while (haschar_uart()) {
@@ -214,7 +212,7 @@ static void handle_interrupt(uintptr_t pc, void *data) {
             // trigger function available, call
             module.trigger[byte_integer]();
             module.bytes_since_last_trigger = 0;
-        } else if (module.bytes_since_last_trigger < MAX_BYTES_NO_TRIGGER) {
+        } else if (module.bytes_since_last_trigger < BT_EXT_MAX_BYTES_NO_TRIGGER) {
             // trigger function not available, increment counter
             module.bytes_since_last_trigger++;
         } else if (module.fallback_trigger != NULL) {
