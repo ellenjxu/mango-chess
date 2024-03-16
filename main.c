@@ -10,16 +10,15 @@
 #include "chess_gui.h"
 #include "gl.h"
 
-#define RE_CLOCK GPIO_PB0
-#define RE_DATA GPIO_PD22
-#define RE_SW GPIO_PD21 // (button)
+extern void hand(void);
+extern void brain(void);
 
-#define MGPIA_MAC "685E1C4C31FD"
-#define MGPIB_MAC "685E1C4C0016"
+// BRAIN or HAND
+#define MODE BRAIN
 
 /*
  * This program allows us to send AT commands to the HC-05 module and receive
- * the response.
+ * the response. It is used for testing purposes of Bluetooth.
  */
 static void terminal_bluetooth(void) {
     interrupts_init();
@@ -67,39 +66,10 @@ static void terminal_bluetooth(void) {
     }
 }
 
-static void handle_message(void *data, const uint8_t *bytes, size_t len) {
-    uart_putstring("Received: ");
-    for (int i = 0; i < len; i++) {
-        uart_putchar(bytes[i]);
-    }
-    uart_putchar('\n');
-}
-
-static void jnxu_test(void) {
-    interrupts_init();
-    interrupts_global_enable();
-    uart_init();
-    jnxu_init(BT_EXT_ROLE_SUBORDINATE, MGPIB_MAC);
-    jnxu_register_handler(1, handle_message, NULL);
-    jnxu_register_handler('a', handle_message, NULL);
-
-    while (1) {
-        uint8_t buf[] = {'H', 'A', '!' };
-        // jnxu_send(1, buf, sizeof(buf));
-        // spin
-    }
-}
-
 int main(void) {
-    jnxu_test();
-    // terminal_bluetooth();
-    // chess_game();
-    // terminal_bluetooth();
-    uart_init();
-    // bt_ext_init();
-    // terminal_bluetooth();
-    // chess_init();
-
-    uart_putstring("Drawing board\n");
-    chess_gui_init();
+#if MODE == BRAIN
+    brain();
+#else
+    hand();
+#endif
 }

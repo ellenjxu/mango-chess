@@ -1,5 +1,5 @@
 PROGRAM = main.bin
-SOURCES = $(PROGRAM:.bin=.c) re.c ringbuffer_ptr.c chess.c bt_ext.c jnxu.c chess_gui.c
+SOURCES = $(PROGRAM:.bin=.c) re.c ringbuffer_ptr.c chess.c bt_ext.c jnxu.c chess_gui.c brain.c hand.c
 
 all: $(PROGRAM)
 
