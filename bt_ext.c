@@ -10,7 +10,6 @@
 #include "gpio.h"
 #include "gpio_extra.h"
 #include "interrupts.h"
-#include "printf.h"
 #include "ringbuffer.h"
 #include "strings.h"
 #include "timer.h"
@@ -188,7 +187,7 @@ static uint8_t recv_uart(void) {
     }
 
     // TEST
-    printf("%c", byte);
+    // printf("%c", byte);
 
     return byte;
 }
@@ -304,7 +303,7 @@ void bt_ext_send_raw_byte(const uint8_t byte) {
     module.uart->regs.thr = byte;
 
     // TEST
-    printf("%c", byte);
+    // printf("%c", byte);
 }
 
 void bt_ext_send_raw_str(const char *buf) {

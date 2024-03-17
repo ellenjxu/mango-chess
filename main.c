@@ -10,15 +10,6 @@
 #include "chess_gui.h"
 #include "gl.h"
 
-extern void hand(void);
-extern void brain(void);
-
-#define MAIN  0
-#define BRAIN 1
-
-// BRAIN or HAND
-#define MODE BRAIN
-
 /*
  * This program allows us to send AT commands to the HC-05 module and receive
  * the response. It is used for testing purposes of Bluetooth.
@@ -70,9 +61,5 @@ static void terminal_bluetooth(void) {
 }
 
 int main(void) {
-#if MODE == BRAIN
-    brain();
-#else
-    hand();
-#endif
+    terminal_bluetooth();
 }

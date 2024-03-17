@@ -1,4 +1,5 @@
 #include "bt_ext.h"
+#include "uart.h"
 
 #define RE_CLOCK GPIO_PB0
 #define RE_DATA GPIO_PD22
@@ -10,5 +11,6 @@
 #define BT_MODE BT_EXT_PRIMARY
 #define BT_MAC  MGPIA_MAC
 
-void hand(void) {
+int main(void) {
+    // TODO
 }

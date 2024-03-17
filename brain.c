@@ -10,7 +10,7 @@
 #define BT_MODE BT_EXT_ROLE_SUBORDINATE
 #define BT_MAC  NULL
 
-void brain(void) {
+int main(void) {
     interrupts_init();
     interrupts_global_enable();
     uart_init();
