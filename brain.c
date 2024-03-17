@@ -11,7 +11,7 @@
 #include "chess_gui.h"
 #include "gl.h"
 
-void brain(void) {
+int main(void) {
     interrupts_init();
     interrupts_global_enable();
     uart_init();

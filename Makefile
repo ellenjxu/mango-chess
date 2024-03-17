@@ -1,5 +1,5 @@
 PROGRAM = main.bin
-SOURCES = $(PROGRAM:.bin=.c) re.c ringbuffer_ptr.c chess.c bt_ext.c jnxu.c chess_gui.c brain.c hand.c
+SOURCES = re.c ringbuffer_ptr.c chess.c bt_ext.c jnxu.c chess_gui.c
 
 all: $(PROGRAM)
 
@@ -19,7 +19,7 @@ OBJECTS = $(addsuffix .o, $(basename $(SOURCES)))
 	riscv64-unknown-elf-objcopy $< -O binary $@
 
 # Link program executable from all common objects
-%.elf: $(OBJECTS) libmymango.a
+%.elf: %.o $(OBJECTS) libmymango.a
 	riscv64-unknown-elf-gcc $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 # Compile C source to object file
@@ -34,6 +34,11 @@ OBJECTS = $(addsuffix .o, $(basename $(SOURCES)))
 run: $(PROGRAM)
 	mango-run $<
 
+brain: brain.bin
+	mango-run $<
+
+hand: hand.bin
+	mango-run $<
 # Remove all build products
 clean:
 	rm -f *.o *.bin *.elf *.list *~
