@@ -39,6 +39,10 @@ brain: brain.bin
 
 hand: hand.bin
 	mango-run $<
+
+lines:
+	cat *.c *.h *.py | wc -l
+
 # Remove all build products
 clean:
 	rm -f *.o *.bin *.elf *.list *~
@@ -56,7 +60,7 @@ $(SOURCES):
 libmymango.a:
 	$(error run `make lib` to build libmymango.a needed for build)
 
-.PHONY: all clean run lib
+.PHONY: all clean run lib lines
 .PRECIOUS: %.elf %.o
 
 # disable built-in rules (they are not used)
