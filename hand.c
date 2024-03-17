@@ -7,10 +7,15 @@
 #include "re.h"
 #include "timer.h"
 #include "uart.h"
+#include <stdint.h>
 
 #define RE_CLOCK GPIO_PB0
 #define RE_DATA GPIO_PD22
 #define RE_SW GPIO_PD21 // (button)
+
+#define RE_TIMEOUT_USEC (200 * 1000) // 200ms
+
+#define MIN_TICKS   10 // minimum number of RE events to treat as turn
 
 #define SERVO_PIN GPIO_PB0
 
@@ -34,6 +39,8 @@
 #define BUZZ_DURATION_USEC      (TICKS_PER_SECOND / 4)
 #define LONG_BUZZ_DURATION_USEC (TICKS_PER_SECOND / 2)
 #define WAIT_BUZZ_DURATION_USEC (TICKS_PER_SECOND / 4)
+
+#define CLAMP(x, min, max) ((x) > (max) ? (max) : ((x) < (min) ? (min) : (x)))
 
 enum {
     BUZZ_IDLE,
@@ -99,8 +106,17 @@ int main(void) {
     jnxu_register_handler(CMD_MOVE, move_handler, NULL);
 
     // In ticks
-    unsigned long buzzer_start = 0, buzzer_duration = 0, buzzer_period = 0;
-    int playing_buzzer = BUZZ_IDLE;
+    unsigned long buzzer_start = 0;
+    unsigned long buzzer_duration = 0;
+    unsigned long buzzer_period = 0;
+    unsigned long last_buzzer_mod = 0;
+    int buzzer_status = BUZZ_IDLE;
+
+    int cw = 0;
+    int ccw = 0;
+    unsigned long last_re_event = 0;
+
+    int cursor = 0;
 
     while (1) {
         // rotary encoder
@@ -108,42 +124,72 @@ int main(void) {
 
         switch (event) {
             case RE_EVENT_CLOCKWISE:
+                cw++;
+                last_re_event = timer_get_ticks();
                 break;
 
             case RE_EVENT_COUNTERCLOCKWISE:
+                ccw++;
+                last_re_event = timer_get_ticks();
                 break;
 
             case RE_EVENT_PUSH:
+                {
+                    uint8_t buf[] = { cursor & 0xFF };
+                    jnxu_send(CMD_CURSOR, buf, sizeof(buf));
+                    cursor = 0;
+                }
                 break;
 
             case RE_EVENT_NONE:
             default:
+                if (timer_get_ticks() - last_re_event > RE_TIMEOUT_USEC * TICKS_PER_USEC) {
+                    if (ccw > cw)
+                        cursor--;
+                    else
+                        cursor++;
+
+                    cursor = CLAMP(cursor, 0, 7);
+
+                    // send cursor packet
+                    uint8_t buf[] = { cursor & 0xFF };
+                    jnxu_send(CMD_CURSOR, buf, sizeof(buf));
+                }
                 break;
         }
 
         // buzzer
-        if (playing_buzzer != BUZZ_IDLE) {
-            // TODO
-            
+        if (buzzer_status != BUZZ_IDLE) {
+            unsigned long dt = timer_get_ticks() - buzzer_start;
+            if (dt > buzzer_duration) {
+                buzzer_status = BUZZ_IDLE;
+            } else {
+                unsigned long mod = dt % buzzer_period;
+                if (mod < last_buzzer_mod) {
+                    gpio_write(SERVO_PIN, !gpio_read(SERVO_PIN));
+                }
+                last_buzzer_mod = mod;
+            }
         } else if (!rb_empty(module.buzzes)) {
-            assert(rb_dequeue(module.buzzes, &playing_buzzer));
+            assert(rb_dequeue(module.buzzes, &buzzer_status));
 
             buzzer_start = timer_get_ticks();
 
-            switch (playing_buzzer) {
+            switch (buzzer_status) {
                 case BUZZ:
                     buzzer_duration = BUZZ_DURATION_USEC;
                     buzzer_period = BUZZER_PERIOD(BUZZ_FREQ_HZ);
+                    last_buzzer_mod = buzzer_period;
                     break;
                 
                 case LONG_BUZZ:
                     buzzer_duration = LONG_BUZZ_DURATION_USEC;
                     buzzer_period = BUZZER_PERIOD(LONG_BUZZ_FREQ_HZ);
+                    last_buzzer_mod = buzzer_period;
                     break;
 
                 case BUZZ_WAIT:
                     buzzer_duration = WAIT_BUZZ_DURATION_USEC;
-                    buzzer_period = WAIT_BUZZ_DURATION_USEC - 1;
                     break;
             }
         }
