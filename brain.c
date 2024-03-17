@@ -78,12 +78,21 @@ static void button_press(void *aux_data, const uint8_t *message, size_t len) {
         }
         move[5] = '\n';
         chess_send_move(move); // send move to stockfish
-        chess_gui_update(move); // update GUI
+        chess_gui_update(move);
         char *new_move = chess_get_move(); // get stockfish move
+        chess_gui_update(new_move);
         jnxu_send(CMD_MOVE, new_move, 6); // send stockfish move to hand
     }
 
     module.state = (module.state + 1) % 5; // next state
+}
+
+static void reset_move(void *aux_data, const uint8_t *message, size_t len) {
+    module.state = LISTENING_X0;
+    module.cursor_x = 0;
+    module.cursor_y = 0;
+    chess_gui_draw_cursor(module.cursor_x, module.cursor_y, false);
+    // shouldn't need to reset module.move because it will be overwritten
 }
 
 int main(void) {
@@ -100,6 +109,7 @@ int main(void) {
 
     jnxu_register_handler(CMD_CURSOR, update_cursor, NULL);
     jnxu_register_handler(CMD_PRESS, button_press, NULL);
+    jnxu_register_handler(CMD_RESET_MOVE, reset_move, NULL);
 
     while (1) {
         // at some point:
