@@ -30,8 +30,14 @@
 #define SHOW_LETTERS true
 #define SHOW_NUMBERS true
 
+// if PLAYER is BLACK, invert the board
+#if PLAYER == WHITE
 #define PIECE_BLACK GL_BLACK
 #define PIECE_WHITE GL_WHITE
+#else
+#define PIECE_BLACK GL_WHITE
+#define PIECE_WHITE GL_BLACK
+#endif
 
 #if THEME == MANGO
 #define CHESS_BLACK gl_color(188,  81, 150)

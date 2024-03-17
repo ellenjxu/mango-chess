@@ -1,6 +1,9 @@
 #ifndef CHESS_GUI_H
 #define CHESS_GUI_H
 
+#ifndef CHESS_SIZE
+#define CHESS_SIZE 8
+#endif
 /*
  * Module for chess GUI. Displays a chess board on the screen. Includes
  * function to update UI based on new move.
@@ -9,9 +12,7 @@
  * Author: Javier Garcia Nieto <jgnieto@stanford.edu>
  */
 
-#ifndef CHESS_SIZE
-#define CHESS_SIZE 8
-#endif
+#include <stdbool.h>
 
 typedef enum {
     XX = 0, // empty square
