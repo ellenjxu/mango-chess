@@ -157,6 +157,9 @@ void chess_gui_draw_cursor(int cursor_x, int cursor_y) {
         5,
         black_square ? CHESS_WHITE : CHESS_BLACK
     );
+
+    prev_cursor_row = row;
+    prev_cursor_col = col;
 }
 
 void chess_gui_update(const char *move) {
