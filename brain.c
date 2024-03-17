@@ -36,13 +36,16 @@ static void update_cursor(void *aux_data, const uint8_t *message, size_t len) {
     if (len < 1) return;
 
     int position = message[0];
+    bool is_piece_taken = true;
 
     switch (module.state) {
         case LISTENING_X0:
+            is_piece_taken = false;
         case LISTENING_X1:
             module.cursor_x = position;
             break;
         case LISTENING_Y0:
+            is_piece_taken = false;
         case LISTENING_Y1:
             module.cursor_y = position;
             break;
@@ -50,7 +53,7 @@ static void update_cursor(void *aux_data, const uint8_t *message, size_t len) {
             break;
     }
     // draw cursor immediately
-    chess_gui_draw_cursor(module.cursor_x, module.cursor_y);
+    chess_gui_draw_cursor(module.cursor_x, module.cursor_y, is_piece_taken);
 }
 
 static void button_press(void *aux_data, const uint8_t *message, size_t len) {
@@ -58,6 +61,8 @@ static void button_press(void *aux_data, const uint8_t *message, size_t len) {
 
     int position = message[0];
     // send info to stockfish
+
+    // add (brain-state, position) to ringbuffer
 }
 
 int main(void) {
