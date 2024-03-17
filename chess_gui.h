@@ -36,6 +36,15 @@ typedef enum {
 void chess_gui_draw(void);
 
 /*
+ * `chess_gui_draw_cursor` draws a border for cursor at the given position.
+ *
+ * @param x                 the x position of the cursor
+ * @param y                 the y position of the cursor
+ * @param is_piece_moved    whether the piece has been moved
+ */
+void chess_gui_draw_cursor(int x, int y, bool is_piece_moved);
+
+/*
  * `chess_gui_update` updates the UI based on the new move.
  *
  * @param move  the move to be updated, with UCI format (e.g. "e2e4\n",

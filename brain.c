@@ -32,7 +32,7 @@ static struct {
     char move[6];
 } module;
 
-static const char promotion_piece_names[] = {'', 'q', 'r', 'b', 'n'};
+static const char promotion_piece_names[] = {'q', 'r', 'b', 'n'};
 
 static void update_cursor(void *aux_data, const uint8_t *message, size_t len) {
     if (len < 1) return;
@@ -68,7 +68,7 @@ static void button_press(void *aux_data, const uint8_t *message, size_t len) {
         char move[6];
         move[0] = 'a' + module.move[0];
         move[2] = 'a' + module.move[2];
-        move[4] = promotion_piece_names[module.move[4]];
+        
         if (PLAYING == BLACK) {
             move[1] = '8' - module.move[1];
             move[3] = '8' - module.move[3];
@@ -76,12 +76,18 @@ static void button_press(void *aux_data, const uint8_t *message, size_t len) {
             move[1] = '1' + module.move[1];
             move[3] = '1' + module.move[3];
         }
-        move[5] = '\n';
+
+        if (position) { // if position = 0, no promotion. TODO: do we want to double press?
+            move[4] = promotion_piece_names[position - 1];
+            move[5] = '\n';
+        } else {
+            move[4] = '\n';
+        }
         chess_send_move(move); // send move to stockfish
         chess_gui_update(move);
         char *new_move = chess_get_move(); // get stockfish move
         chess_gui_update(new_move);
-        jnxu_send(CMD_MOVE, new_move, 6); // send stockfish move to hand
+        jnxu_send(CMD_MOVE, (const uint8_t *)new_move, 6); // send stockfish move to hand
     }
 
     module.state = (module.state + 1) % 5; // next state
