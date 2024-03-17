@@ -12,6 +12,11 @@
 #define BT_MODE BT_EXT_ROLE_SUBORDINATE
 #define BT_MAC  NULL
 
+#define BLACK -1
+#define WHITE 1
+
+#define PLAYING BLACK
+
 typedef enum {
     LISTENING_X0,
     LISTENING_Y0,
@@ -23,46 +28,62 @@ typedef enum {
 static struct {
     volatile int cursor_x;
     volatile int cursor_y;
-
     volatile brain_state_t state;
+    char move[6];
 } module;
 
-typedef struct {
-    brain_state_t state;
-    int x;
-} brain_update_t;
+static const char promotion_piece_names[] = {'', 'q', 'r', 'b', 'n'};
 
 static void update_cursor(void *aux_data, const uint8_t *message, size_t len) {
     if (len < 1) return;
 
     int position = message[0];
-    bool is_piece_taken = true;
+    bool is_piece_moved = true;
 
     switch (module.state) {
         case LISTENING_X0:
-            is_piece_taken = false;
+            is_piece_moved = false;
         case LISTENING_X1:
             module.cursor_x = position;
             break;
         case LISTENING_Y0:
-            is_piece_taken = false;
+            is_piece_moved = false;
         case LISTENING_Y1:
             module.cursor_y = position;
             break;
         default:
             break;
     }
-    // draw cursor immediately
-    chess_gui_draw_cursor(module.cursor_x, module.cursor_y, is_piece_taken);
+
+    chess_gui_draw_cursor(module.cursor_x, module.cursor_y, is_piece_moved);
 }
 
 static void button_press(void *aux_data, const uint8_t *message, size_t len) {
     if (len < 1) return;
 
     int position = message[0];
-    // send info to stockfish
+    module.move[module.state] = position; // store move
+    
+    if (module.state == LISTENING_PROMOTION) {  // end of move
+        char move[6];
+        move[0] = 'a' + module.move[0];
+        move[2] = 'a' + module.move[2];
+        move[4] = promotion_piece_names[module.move[4]];
+        if (PLAYING == BLACK) {
+            move[1] = '8' - module.move[1];
+            move[3] = '8' - module.move[3];
+        } else {
+            move[1] = '1' + module.move[1];
+            move[3] = '1' + module.move[3];
+        }
+        move[5] = '\n';
+        chess_send_move(move); // send move to stockfish
+        chess_gui_update(move); // update GUI
+        char *new_move = chess_get_move(); // get stockfish move
+        jnxu_send(CMD_MOVE, new_move, 6); // send stockfish move to hand
+    }
 
-    // add (brain-state, position) to ringbuffer
+    module.state = (module.state + 1) % 5; // next state
 }
 
 int main(void) {
@@ -79,7 +100,6 @@ int main(void) {
 
     jnxu_register_handler(CMD_CURSOR, update_cursor, NULL);
     jnxu_register_handler(CMD_PRESS, button_press, NULL);
-    // chess_gui_update("e8g8\n");
 
     while (1) {
         // at some point:

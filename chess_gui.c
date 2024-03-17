@@ -132,13 +132,14 @@ void gl_draw_border(int x, int y, int width, int height, int thickness, color_t 
     gl_draw_rect(x, y + height - thickness, width, thickness, color);
 }
 
-void chess_gui_draw_cursor(int cursor_x, int cursor_y, bool is_piece_taken) {
+void chess_gui_draw_cursor(int cursor_x, int cursor_y, bool is_piece_moved) {
     // input is x,y from bottom left; invert y
+    // TODO: since we are encoding opponent's move, top left is easier
     int col = cursor_x;
     int row = CHESS_SIZE - cursor_y;
 
     // erase prev cursor and draw new one
-    // TODO: if we have a taken piece, move it too
+    // TODO: if is_piece_moved also move the piece
     int black_square = (prev_cursor_row + prev_cursor_col) % 2;
     gl_draw_border(
         prev_cursor_row * SQUARE_SIZE,
