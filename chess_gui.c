@@ -63,6 +63,9 @@ static chess_gui_piece_t board[CHESS_SIZE][CHESS_SIZE];
 static chess_gui_piece_t taken[4 * CHESS_SIZE];
 static int taken_count = 0;
 
+static int prev_cursor_row = 7; // start at the bottom of the board
+static int prev_cursor_col = 0;
+
 static bool is_white(chess_gui_piece_t piece) {
     switch (piece) {
         case WP:
@@ -117,6 +120,43 @@ void chess_gui_draw(void) {
         }
     }
     gl_swap_buffer();
+}
+
+/*
+* Draws a border around a rectangle.
+*/
+void gl_draw_border(int x, int y, int width, int height, int thickness, color_t color) {
+    gl_draw_rect(x, y, width, thickness, color);
+    gl_draw_rect(x, y, thickness, height, color);
+    gl_draw_rect(x + width - thickness, y, thickness, height, color);
+    gl_draw_rect(x, y + height - thickness, width, thickness, color);
+}
+
+void chess_gui_draw_cursor(int cursor_x, int cursor_y) {
+    // input is x,y from bottom left; invert y
+    int col = cursor_x;
+    int row = CHESS_SIZE - cursor_y;
+
+    // erase prev cursor and draw new one
+    int black_square = (prev_cursor_row + prev_cursor_col) % 2;
+    gl_draw_border(
+        prev_cursor_row * SQUARE_SIZE,
+        prev_cursor_col * SQUARE_SIZE,
+        SQUARE_SIZE,
+        SQUARE_SIZE,
+        5,
+        black_square ? CHESS_WHITE : CHESS_BLACK
+    );
+
+    black_square = (row + col) % 2;
+    gl_draw_border(
+        row * SQUARE_SIZE,
+        col * SQUARE_SIZE,
+        SQUARE_SIZE,
+        SQUARE_SIZE,
+        5,
+        black_square ? CHESS_WHITE : CHESS_BLACK
+    );
 }
 
 void chess_gui_update(const char *move) {

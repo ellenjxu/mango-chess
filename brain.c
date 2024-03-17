@@ -49,6 +49,8 @@ static void update_cursor(void *aux_data, const uint8_t *message, size_t len) {
         default:
             break;
     }
+    // draw cursor immediately
+    chess_gui_draw_cursor(module.cursor_x, module.cursor_y);
 }
 
 static void button_press(void *aux_data, const uint8_t *message, size_t len) {
