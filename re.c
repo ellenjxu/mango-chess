@@ -14,6 +14,8 @@
 #include "timer.h"
 #include <stdint.h>
 
+#define BUTTON_DEBOUNCE_USEC    (250 * 1000) // 250 ms
+
 void handle_clock(uintptr_t pc, void *data) {
     re_device_t* dev = (re_device_t*)data;
     int clk_state = gpio_read(dev->clock);
@@ -31,10 +33,19 @@ void handle_clock(uintptr_t pc, void *data) {
 }
 
 void handle_button(uintptr_t pc, void *data) {
-    re_device_t* dev = (re_device_t*)data;
-    rb_enqueue(dev->rb, RE_EVENT_PUSH);
+    static unsigned long last_button = 0;
 
+    re_device_t* dev = (re_device_t*)data;
     gpio_interrupt_clear(dev->sw);
+
+    unsigned long now = timer_get_ticks();
+
+    if (now - last_button > BUTTON_DEBOUNCE_USEC * TICKS_PER_USEC) {
+        rb_enqueue(dev->rb, RE_EVENT_PUSH);
+    } // else was too fast, ignore
+
+    last_button = now;
+
 }
 
 re_device_t* re_new(gpio_id_t clock_gpio, gpio_id_t data_gpio, gpio_id_t sw_gpio) {
