@@ -5,6 +5,7 @@
  * Author: Ellen Xu <ellenjxu@stanford.edu>
  * Author: Javier Garcia Nieto <jgnieto@stanford.edu>
  */
+#include "chess_commands.h"
 #include "chess_gui.h"
 #include "gl.h"
 #include "gpio.h"
@@ -196,7 +197,12 @@ static void reset_cursor(void) {
     cursor.chosen_col = 0;
     cursor.chosen_row = 0;
     cursor.col = 0;
+
+#if PLAYING == BLACK
     cursor.row = 0;
+#else
+    cursor.row = CHESS_SIZE - 1;
+#endif
 }
 
 void chess_gui_update(const char *move) {
