@@ -31,6 +31,12 @@ static struct {
 
 static const char promotion_piece_names[] = { 'r', 'n', 'b', 'q', 'q', 'b', 'n', 'r' };
 
+static void reset_cursor(void) {
+    module.cursor_x = 0;
+    module.cursor_y = CHESS_SIZE - 1;
+    module.cursor_promotion = 0;
+}
+
 static void update_cursor(void *aux_data, const uint8_t *message, size_t len) {
     if (len < 1) return;
 
@@ -115,7 +121,7 @@ static void button_press(void *aux_data, const uint8_t *message, size_t len) {
                 char *your_move = chess_get_move(); // get stockfish move (always valid)
                 chess_gui_update(your_move);
                 jnxu_send(CMD_MOVE, (const uint8_t *)your_move, 6); // send stockfish move to hand
-                module.cursor_x = 0, module.cursor_y = 0, module.cursor_promotion = 0;
+                reset_cursor();
             }
             break;
     }
@@ -129,8 +135,7 @@ static void button_press(void *aux_data, const uint8_t *message, size_t len) {
 
 static void reset_move(void *aux_data, const uint8_t *message, size_t len) {
     module.state = LISTENING_X0;
-    module.cursor_x = 0;
-    module.cursor_y = 0;
+    reset_cursor();
     chess_gui_draw_cursor(module.cursor_x, module.cursor_y, false);
 }
 
