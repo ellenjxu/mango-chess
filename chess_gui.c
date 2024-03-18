@@ -113,60 +113,59 @@ void chess_gui_draw(void) {
     for (int row = 0; row < 8; row++) {
         int black_square = row % 2;
         for (int col = 0; col < 8; col++) {
-            if (!stale[row][col])
-                continue;
-
-            gl_draw_rect(
-                    SQUARE_SIZE*col,
-                    SQUARE_SIZE*row,
-                    SQUARE_SIZE,
-                    SQUARE_SIZE,
-                    black_square ? CHESS_BLACK : CHESS_WHITE
-                    );
-
-            if (row == cursor.row && col == cursor.col && cursor.has_chosen) {
-                gl_draw_char(
-                        SQUARE_SIZE*col + SQUARE_SIZE / 2 - gl_get_char_width() / 2,
-                        SQUARE_SIZE*row + SQUARE_SIZE / 2 - gl_get_char_height() / 2,
-                        chess_gui_piece_names[board[row][col]],
-                        CURSOR_COLOR
-                        );
-            } else if (row == cursor.chosen_row && row == cursor.chosen_col && cursor.has_chosen) {
-                // draw nothing
-            } else {
-                gl_draw_char(
-                        SQUARE_SIZE*col + SQUARE_SIZE / 2 - gl_get_char_width() / 2,
-                        SQUARE_SIZE*row + SQUARE_SIZE / 2 - gl_get_char_height() / 2,
-                        chess_gui_piece_names[board[row][col]],
-                        is_white(board[row][col]) ? PIECE_WHITE : PIECE_BLACK
-                        );
-            }
-
-            if (row == cursor.row && col == cursor.col) {
-                draw_border(
-                        row * SQUARE_SIZE,
-                        col * SQUARE_SIZE,
+            if (stale[row][col]) {
+                gl_draw_rect(
+                        SQUARE_SIZE*col,
+                        SQUARE_SIZE*row,
                         SQUARE_SIZE,
                         SQUARE_SIZE,
-                        cursor.has_chosen ? THIN_CURSOR : THICK_CURSOR,
-                        CURSOR_COLOR
+                        black_square ? CHESS_BLACK : CHESS_WHITE
                         );
-            }
 
-            if (row == 7 && SHOW_LETTERS) {
-                gl_draw_char(
-                        SQUARE_SIZE*(col + 1) - gl_get_char_width()  - PADDING,
-                        SQUARE_SIZE*(row + 1) - gl_get_char_height() - PADDING,
-                        'a' + col, black_square ? CHESS_WHITE : CHESS_BLACK
-                        );
-            }
+                if (row == cursor.row && col == cursor.col && cursor.has_chosen) {
+                    gl_draw_char(
+                            SQUARE_SIZE*col + SQUARE_SIZE / 2 - gl_get_char_width() / 2,
+                            SQUARE_SIZE*row + SQUARE_SIZE / 2 - gl_get_char_height() / 2,
+                            chess_gui_piece_names[board[cursor.chosen_row][cursor.chosen_col]],
+                            CURSOR_COLOR
+                            );
+                } else if (row == cursor.chosen_row && row == cursor.chosen_col && cursor.has_chosen) {
+                    // draw nothing
+                } else {
+                    gl_draw_char(
+                            SQUARE_SIZE*col + SQUARE_SIZE / 2 - gl_get_char_width() / 2,
+                            SQUARE_SIZE*row + SQUARE_SIZE / 2 - gl_get_char_height() / 2,
+                            chess_gui_piece_names[board[row][col]],
+                            is_white(board[row][col]) ? PIECE_WHITE : PIECE_BLACK
+                            );
+                }
 
-            if (col == 0 && SHOW_NUMBERS) {
-                gl_draw_char(
-                        SQUARE_SIZE*col + PADDING,
-                        SQUARE_SIZE*row + PADDING,
-                        '1' + 7 - row, black_square ? CHESS_WHITE : CHESS_BLACK
-                        );
+                if (row == cursor.row && col == cursor.col) {
+                    draw_border(
+                            row * SQUARE_SIZE,
+                            col * SQUARE_SIZE,
+                            SQUARE_SIZE,
+                            SQUARE_SIZE,
+                            cursor.has_chosen ? THIN_CURSOR : THICK_CURSOR,
+                            CURSOR_COLOR
+                            );
+                }
+
+                if (row == 7 && SHOW_LETTERS) {
+                    gl_draw_char(
+                            SQUARE_SIZE*(col + 1) - gl_get_char_width()  - PADDING,
+                            SQUARE_SIZE*(row + 1) - gl_get_char_height() - PADDING,
+                            'a' + col, black_square ? CHESS_WHITE : CHESS_BLACK
+                            );
+                }
+
+                if (col == 0 && SHOW_NUMBERS) {
+                    gl_draw_char(
+                            SQUARE_SIZE*col + PADDING,
+                            SQUARE_SIZE*row + PADDING,
+                            '1' + 7 - row, black_square ? CHESS_WHITE : CHESS_BLACK
+                            );
+                }
             }
 
             black_square = !black_square;
@@ -282,6 +281,8 @@ void chess_gui_print(void) {
 void chess_gui_init(void) {
     gl_init(SCREEN_WIDTH, SCREEN_HEIGHT, GL_SINGLEBUFFER);
     memcpy(board, STARTING_BOARD, sizeof(STARTING_BOARD));
+    cursor.col = -1;
+    cursor.row = -1;
     stale_everything();
     chess_gui_draw();
 }

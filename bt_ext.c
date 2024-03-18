@@ -77,6 +77,7 @@ static struct {
 
     bt_ext_role_t role;
     volatile bool connected;
+    volatile bool was_ever_connected;
 
     volatile int bytes_since_last_trigger;
 
@@ -186,6 +187,7 @@ static uint8_t recv_uart(void) {
 
     if (did_connect()) {
         module.connected = true;
+        module.was_ever_connected = true;
 
     // else if lost connection
     } else if (ringstrcmp(ring.buf, sizeof(ring.buf), ring.nbytes, LOST_MESSAGE, sizeof(LOST_MESSAGE) - 1)) {
@@ -367,6 +369,9 @@ static bool ensure_role(void) {
 }
 
 void bt_ext_connect(const bt_ext_role_t role, const char *mac) {
+    if (module.was_ever_connected)
+        return;
+
     module.role = role;
 
     // Set the role if it has not been set. If it fails, return.
