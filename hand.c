@@ -173,7 +173,7 @@ last_update:
                     {
                         uint8_t buf[] = { cursor & 0xFF };
                         printf("Sending (%d)\n", cursor);
-                        jnxu_send(CMD_CURSOR, buf, sizeof(buf));
+                        jnxu_send(CMD_PRESS, buf, sizeof(buf));
                         cursor = 0;
                     }
                     break;

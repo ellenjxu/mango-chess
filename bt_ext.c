@@ -466,6 +466,7 @@ void bt_ext_init(void) {
     static const char *CONFIG_COMMANDS[] = {
         "AT",       // closes any open connections
         "AT+RESET", // reset module
+        "AT+CLEAR", // idk why but we need this
         "AT+NOTI1", // enable notifications (OK+CONN and OK+LOST)
     };
 

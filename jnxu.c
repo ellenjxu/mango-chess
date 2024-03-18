@@ -17,9 +17,9 @@
 
 #define NUM_CMDS        256
 
-#define RECONNECT_DELAY_USEC (1000 * 1000) // 1 second
+#define RECONNECT_DELAY_USEC (5 * 1000 * 1000) // 5 seconds
 #define RECONNECT_CHECKS 10
-#define RECONNECT_RETRIES 5
+#define RECONNECT_RETRIES 1
 
 enum message_state {
     WAITING_FOR_START = 0,
