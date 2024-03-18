@@ -170,6 +170,7 @@ void chess_gui_draw(void) {
             }
 
             black_square = !black_square;
+            stale[row][col] = 0;
         }
     }
 }
