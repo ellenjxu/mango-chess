@@ -76,15 +76,15 @@ static void update_cursor(void *aux_data, const uint8_t *message, size_t len) {
 
 static void button_press(void *aux_data, const uint8_t *message, size_t len) {
     switch (module.state) {
-        case LISTENING_X0:
         case LISTENING_X1:
+        case LISTENING_X0:
             module.move[module.state] = module.cursor_x;
             break;
         
         case LISTENING_Y1:
             module.cursor_promotion = -1;
         case LISTENING_Y0:
-            module.move[module.state] = module.cursor_x;
+            module.move[module.state] = module.cursor_y;
             break;
 
         case LISTENING_PROMOTION:
@@ -111,15 +111,20 @@ static void button_press(void *aux_data, const uint8_t *message, size_t len) {
                 }
 
                 chess_send_move(opp_move); // send move to stockfish
-                chess_gui_update(opp_move);
-                char *your_move = chess_get_move(); // get stockfish move
+                chess_gui_update(opp_move); // TODO: check if this move is valid before updating
+                char *your_move = chess_get_move(); // get stockfish move (always valid)
                 chess_gui_update(your_move);
                 jnxu_send(CMD_MOVE, (const uint8_t *)your_move, 6); // send stockfish move to hand
+                module.cursor_x = 0, module.cursor_y = 0, module.cursor_promotion = 0;
             }
             break;
     }
 
     module.state = (module.state + 1) % 5; // next state
+
+    if (module.state == LISTENING_X1) { // show selected on button bress
+        chess_gui_draw_cursor(module.cursor_x, module.cursor_y, true);
+    }
 }
 
 static void reset_move(void *aux_data, const uint8_t *message, size_t len) {
@@ -134,18 +139,16 @@ int main(void) {
     interrupts_global_enable();
     uart_init();
 
-    chess_gui_init();
-    // chess_init();
-    // chess_gui_print();
-
     jnxu_init(BT_MODE, BT_MAC);
-
     jnxu_register_handler(CMD_CURSOR, update_cursor, NULL);
     jnxu_register_handler(CMD_PRESS, button_press, NULL);
     jnxu_register_handler(CMD_RESET_MOVE, reset_move, NULL);
 
-    // if white, then read first move from stockfish first
-    if (PLAYING == WHITE) {
+    chess_gui_init();
+    chess_init();
+    // chess_gui_print();
+
+    if (PLAYING == WHITE) { // if white, read first move from stockfish
         char *your_move = chess_get_move();
         chess_gui_update(your_move);
         jnxu_send(CMD_MOVE, (const uint8_t *)your_move, 6);

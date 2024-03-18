@@ -158,8 +158,8 @@ void chess_gui_draw(void) {
 
                 if (row == cursor.row && col == cursor.col) {
                     draw_border(
-                            row * SQUARE_SIZE,
                             col * SQUARE_SIZE,
+                            row * SQUARE_SIZE,
                             SQUARE_SIZE,
                             SQUARE_SIZE,
                             cursor.has_chosen ? THICK_CURSOR : THIN_CURSOR,
@@ -182,17 +182,21 @@ void chess_gui_draw_cursor(int cursor_col, int cursor_row, bool is_piece_chosen)
 
     stale[cursor.row][cursor.col] = 1;
 
-    printf("0 cursor_row: %d, cursor_col: %d\n", cursor_row, cursor_col);
-
     cursor.has_chosen = is_piece_chosen;
-
     cursor.col = cursor_col;
     cursor.row = CHESS_SIZE - cursor_row - 1;
 
     stale[cursor.row][cursor.col] = 1;
 
-    printf("1 cursor_row: %d, cursor_col: %d\n", cursor_row, cursor_col);
     chess_gui_draw();
+}
+
+static void reset_cursor(void) {
+    cursor.has_chosen = false;
+    cursor.chosen_col = 0;
+    cursor.chosen_row = 0;
+    cursor.col = 0;
+    cursor.row = 0;
 }
 
 void chess_gui_update(const char *move) {
@@ -267,6 +271,7 @@ void chess_gui_update(const char *move) {
     board[row1][col1] = XX;
 
     stale_everything();
+    reset_cursor();
     chess_gui_draw();
 }
 
@@ -284,8 +289,6 @@ void chess_gui_print(void) {
 void chess_gui_init(void) {
     gl_init(SCREEN_WIDTH, SCREEN_HEIGHT, GL_SINGLEBUFFER);
     memcpy(board, STARTING_BOARD, sizeof(STARTING_BOARD));
-    cursor.col = -1;
-    cursor.row = -1;
     stale_everything();
-    chess_gui_draw();
+    reset_cursor();
 }

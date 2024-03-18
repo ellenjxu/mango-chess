@@ -24,9 +24,9 @@ stockfish = Stockfish(path=STOCKFISH_PATH)
 
 def get_move():
     while True:
-        start = ser.readline().decode("utf-8").strip()
+        start = ser.readline().decode("ascii").strip()
         if start == "MOVE_BEGIN":
-            move = ser.readline().decode("utf-8").strip()
+            move = ser.readline().decode("ascii").strip()
             break
     print(move)
     return move
@@ -37,9 +37,9 @@ def send_move(move):
 
 with serial.Serial(SERIAL_PORT, 115200, timeout=1) as ser:
     # try:
-    start = ser.readline().decode("utf-8").strip()
+    start = ser.readline().decode("ascii").strip()
     while (start != "GAME_BEGIN"):
-        start = ser.readline().decode("utf-8").strip()
+        start = ser.readline().decode("ascii").strip()
     print(start)
     ser.write("READY\n".encode())
 
