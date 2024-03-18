@@ -65,9 +65,9 @@ static chess_gui_piece_t board[CHESS_SIZE][CHESS_SIZE];
 static chess_gui_piece_t taken[4 * CHESS_SIZE];
 static int taken_count = 0;
 
-static int prev_cursor_row = 7; // bottom left
-static int prev_cursor_col = 0;
-static int moving_piece = XX;
+static int chosen_piece_row;
+static int chosen_piece_col;
+static int chosen_piece = XX;
 
 static bool is_white(chess_gui_piece_t piece) {
     switch (piece) {
@@ -135,6 +135,7 @@ static void draw_border(int x, int y, int width, int height, int thickness, colo
 }
 
 void chess_gui_draw_cursor(int cursor_x, int cursor_y, bool is_piece_moved) {
+    // update board if piece moved
     chess_gui_draw();
 
     if (cursor_x < 0 || cursor_y < 0 || cursor_x > 7 || cursor_y > 7)
@@ -144,12 +145,13 @@ void chess_gui_draw_cursor(int cursor_x, int cursor_y, bool is_piece_moved) {
     int col = CHESS_SIZE - cursor_y - 1;
 
     int border_thickness = is_piece_moved ? 5 : 3;
-    if (is_piece_moved && moving_piece == XX) {
-        moving_piece = board[col][row];
+    if (is_piece_moved && chosen_piece == XX) {
+        chosen_piece = board[col][row];
+        chosen_piece_row = row;
+        chosen_piece_col = col;
     }
 
     // TODO: if is_piece_moved also move the piece
-    int black_square = (prev_cursor_row + prev_cursor_col) % 2; // fill in prev cursor
     draw_border(
         row * SQUARE_SIZE,
         col * SQUARE_SIZE,
@@ -158,9 +160,6 @@ void chess_gui_draw_cursor(int cursor_x, int cursor_y, bool is_piece_moved) {
         border_thickness,
         CURSOR_COLOR
     );
-
-    prev_cursor_row = row;
-    prev_cursor_col = col;
 }
 
 void chess_gui_update(const char *move) {
