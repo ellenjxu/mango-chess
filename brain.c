@@ -111,7 +111,7 @@ int main(void) {
 
     chess_gui_init();
 
-    chess_gui_print();
+    // chess_gui_print();
     timer_delay(5);
 
     jnxu_init(BT_MODE, BT_MAC);
@@ -119,6 +119,11 @@ int main(void) {
     jnxu_register_handler(CMD_CURSOR, update_cursor, NULL);
     jnxu_register_handler(CMD_PRESS, button_press, NULL);
     jnxu_register_handler(CMD_RESET_MOVE, reset_move, NULL);
+
+    uart_putstring("Brain ready\n");
+
+    // test
+    chess_gui_draw_cursor(0, 0, false);
 
     while (1) {
         // at some point:

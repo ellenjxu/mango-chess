@@ -137,18 +137,19 @@ void chess_gui_draw_cursor(int cursor_x, int cursor_y, bool is_piece_moved) {
     // input is x,y from bottom left; invert y
     // TODO: since we are encoding opponent's move, top left is easier
     int col = cursor_x;
-    int row = CHESS_SIZE - cursor_y;
+    int row = CHESS_SIZE - cursor_y - 1;
 
-    // erase prev cursor and draw new one
+    int border_thickness = 50; // is_piece_moved ? 5 : 50;
+
     // TODO: if is_piece_moved also move the piece
-    int black_square = (prev_cursor_row + prev_cursor_col) % 2;
+    int black_square = (prev_cursor_row + prev_cursor_col) % 2; // fill in prev cursor
     gl_draw_border(
         prev_cursor_row * SQUARE_SIZE,
         prev_cursor_col * SQUARE_SIZE,
         SQUARE_SIZE,
         SQUARE_SIZE,
-        5,
-        black_square ? CHESS_WHITE : CHESS_BLACK
+        border_thickness,
+        black_square ? CHESS_BLACK : CHESS_WHITE
     );
 
     black_square = (row + col) % 2;
@@ -157,7 +158,7 @@ void chess_gui_draw_cursor(int cursor_x, int cursor_y, bool is_piece_moved) {
         col * SQUARE_SIZE,
         SQUARE_SIZE,
         SQUARE_SIZE,
-        5,
+        border_thickness,
         black_square ? CHESS_WHITE : CHESS_BLACK
     );
 
