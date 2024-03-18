@@ -182,6 +182,8 @@ void chess_gui_draw_cursor(int cursor_col, int cursor_row, bool is_piece_chosen)
 
     stale[cursor.row][cursor.col] = 1;
 
+    printf("0 cursor_row: %d, cursor_col: %d\n", cursor_row, cursor_col);
+
     cursor.has_chosen = is_piece_chosen;
 
     cursor.col = cursor_col;
@@ -189,6 +191,7 @@ void chess_gui_draw_cursor(int cursor_col, int cursor_row, bool is_piece_chosen)
 
     stale[cursor.row][cursor.col] = 1;
 
+    printf("1 cursor_row: %d, cursor_col: %d\n", cursor_row, cursor_col);
     chess_gui_draw();
 }
 
