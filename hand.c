@@ -27,11 +27,6 @@
 #define BT_MODE BT_EXT_ROLE_PRIMARY
 #define BT_MAC  MGPIA_MAC
 
-#define BLACK -1
-#define WHITE 1
-
-#define PLAYING WHITE
-
 #define TICKS_PER_SECOND    (1000 * 1000 * TICKS_PER_USEC)
 
 #define SERVO_PULSE_LONG_USEC   1000

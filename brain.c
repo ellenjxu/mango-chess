@@ -12,11 +12,6 @@
 #define BT_MODE BT_EXT_ROLE_SUBORDINATE
 #define BT_MAC  NULL
 
-#define BLACK -1
-#define WHITE 1
-
-#define PLAYING BLACK
-
 typedef enum {
     LISTENING_X0,
     LISTENING_Y0,
@@ -38,24 +33,33 @@ static void update_cursor(void *aux_data, const uint8_t *message, size_t len) {
     if (len < 1) return;
 
     int position = message[0];
-    bool is_piece_moved = true;
 
     switch (module.state) {
         case LISTENING_X0:
-            is_piece_moved = false;
         case LISTENING_X1:
             module.cursor_x = position;
             break;
         case LISTENING_Y0:
-            is_piece_moved = false;
         case LISTENING_Y1:
             module.cursor_y = position;
             break;
-        default:
+        case LISTENING_PROMOTION:
+            module.cursor_x = position;
+            module.cursor_y = 0;
             break;
     }
 
-    chess_gui_draw_cursor(module.cursor_x, module.cursor_y, is_piece_moved);
+#if PLAYING == WHITE
+    int visual_cursor_x = module.cursor_x;
+    int visual_cursor_y = module.cursor_y;
+#else
+    int visual_cursor_x = CHESS_SIZE - module.cursor_x - 1;
+    int visual_cursor_y = CHESS_SIZE - module.cursor_y - 1;
+#endif
+
+    bool is_piece_moved = module.state == LISTENING_X1 || module.state == LISTENING_Y1;
+
+    chess_gui_draw_cursor(visual_cursor_x, visual_cursor_y, is_piece_moved);
 }
 
 static void button_press(void *aux_data, const uint8_t *message, size_t len) {
@@ -98,7 +102,6 @@ static void reset_move(void *aux_data, const uint8_t *message, size_t len) {
     module.cursor_x = 0;
     module.cursor_y = 0;
     chess_gui_draw_cursor(module.cursor_x, module.cursor_y, false);
-    // shouldn't need to reset module.move because it will be overwritten
 }
 
 int main(void) {
