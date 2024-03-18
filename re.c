@@ -10,47 +10,54 @@
 #include "gpio_interrupt.h"
 #include "interrupts.h"
 #include "malloc.h"
-#include "ringbuffer.h"
+#include "ringbuffer_ptr.h"
 #include "timer.h"
 #include <stdint.h>
 
-#define BUTTON_DEBOUNCE_USEC    (250 * 1000) // 250 ms
-
 void handle_clock(uintptr_t pc, void *data) {
-    re_device_t* dev = (re_device_t*)data;
+    re_device_t *dev = (re_device_t*)data;
+    gpio_interrupt_clear(dev->clock);
+
+    // read pin states
     int clk_state = gpio_read(dev->clock);
     int data_state = gpio_read(dev->data);
+
+    // create event struct
+    unsigned long now = timer_get_ticks();
+    re_event_t *event = malloc(sizeof(re_event_t));
+    event->ticks = now;
     
     if (clk_state == data_state) {
-        rb_enqueue(dev->rb, RE_EVENT_CLOCKWISE);
+        // data leads, clockwise
+        event->type = RE_EVENT_CLOCKWISE;
         dev->angle--;
     } else {
-        rb_enqueue(dev->rb, RE_EVENT_COUNTERCLOCKWISE);
+        // clock leads, counterclockwise
+        event->type = RE_EVENT_COUNTERCLOCKWISE;
         dev->angle++;
     }
 
-    gpio_interrupt_clear(dev->clock);
+    rb_ptr_enqueue(dev->rb, (uintptr_t)event);
 }
 
 void handle_button(uintptr_t pc, void *data) {
-    static unsigned long last_button = 0;
-
     re_device_t* dev = (re_device_t*)data;
     gpio_interrupt_clear(dev->sw);
 
+    // create event struct
     unsigned long now = timer_get_ticks();
+    re_event_t *event = malloc(sizeof(re_event_t));
 
-    if (now - last_button > BUTTON_DEBOUNCE_USEC * TICKS_PER_USEC) {
-        rb_enqueue(dev->rb, RE_EVENT_PUSH);
-    } // else was too fast, ignore
+    event->ticks = now;
+    event->type = RE_EVENT_PUSH;
 
-    last_button = now;
-
+    rb_ptr_enqueue(dev->rb, (uintptr_t)event);
 }
 
-re_device_t* re_new(gpio_id_t clock_gpio, gpio_id_t data_gpio, gpio_id_t sw_gpio) {
+re_device_t *re_new(gpio_id_t clock_gpio, gpio_id_t data_gpio, gpio_id_t sw_gpio) {
     re_device_t* dev = malloc(sizeof(*dev));
 
+    // set up GPIO pins
     dev->clock = clock_gpio;
     gpio_set_input(dev->clock);
     gpio_set_pullup(dev->clock);
@@ -63,8 +70,11 @@ re_device_t* re_new(gpio_id_t clock_gpio, gpio_id_t data_gpio, gpio_id_t sw_gpio
     gpio_set_input(dev->sw);
     gpio_set_pullup(dev->sw);
 
-    dev->rb = rb_new();
+    // allocate ringbuffer for rotary encoder events (stored as pointers).
+    dev->rb = rb_ptr_new();
 
+    // set up interrupts
+    // use the data pointer of the interrupt to store the deviece
     gpio_interrupt_init();
 
     gpio_interrupt_config(dev->clock, GPIO_INTERRUPT_NEGATIVE_EDGE, true);
@@ -78,18 +88,22 @@ re_device_t* re_new(gpio_id_t clock_gpio, gpio_id_t data_gpio, gpio_id_t sw_gpio
     return dev;
 }
 
-re_event_t re_read(re_device_t* dev) {
-    int result;
-    if (rb_dequeue(dev->rb, &result)) {
-        return result;
+re_event_t *re_read(re_device_t* dev) {
+    uintptr_t result;
+    if (rb_ptr_dequeue(dev->rb, &result)) {
+        // success
+        return (re_event_t *)result;
     } else {
-        return RE_EVENT_NONE;
+        // failure
+        return NULL;
     }
 }
 
-re_event_t re_read_blocking(re_device_t* dev) {
-    int result;
-    while (!rb_dequeue(dev->rb, &result)) {}
-    return result;
+re_event_t *re_read_blocking(re_device_t* dev) {
+    uintptr_t result;
+
+    while (!rb_ptr_dequeue(dev->rb, &result)) {} // spin
+
+    return (re_event_t *)result;
 }
 

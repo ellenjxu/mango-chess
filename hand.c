@@ -3,6 +3,8 @@
 #include "gpio.h"
 #include "interrupts.h"
 #include "jnxu.h"
+#include "malloc.h"
+#include "printf.h"
 #include "ringbuffer.h"
 #include "re.h"
 #include "timer.h"
@@ -15,9 +17,9 @@
 
 #define RE_TIMEOUT_USEC (200 * 1000) // 200ms
 
-#define MIN_TICKS   10 // minimum number of RE events to treat as turn
+#define MIN_TICKS   4 // minimum number of RE events to treat as turn
 
-#define SERVO_PIN GPIO_PB0
+#define SERVO_PIN GPIO_PB1
 
 #define MGPIA_MAC "685E1C4C31FD"
 #define MGPIB_MAC "685E1C4C0016"
@@ -28,25 +30,30 @@
 #define BLACK -1
 #define WHITE 1
 
-#define PLAYING BLACK
+#define PLAYING WHITE
 
 #define TICKS_PER_SECOND    (1000 * 1000 * TICKS_PER_USEC)
-#define BUZZER_PERIOD(f)    (TICKS_PER_SECOND / f)
 
-#define BUZZ_FREQ_HZ        10
-#define LONG_BUZZ_FREQ_HZ   10
+#define SERVO_PULSE_LONG_USEC   1000
+#define SERVO_PULSE_SHORT_USEC  1200
+#define SERVO_PERIOD_USEC       20 * 1000
 
-#define BUZZ_DURATION_USEC      (TICKS_PER_SECOND / 4)
-#define LONG_BUZZ_DURATION_USEC (TICKS_PER_SECOND / 2)
-#define WAIT_BUZZ_DURATION_USEC (TICKS_PER_SECOND / 4)
+#define BUZZ_DURATION_TICKS             (TICKS_PER_SECOND / 4)
+#define BUZZ_WAIT_DURATION_TICKS        (TICKS_PER_SECOND / 6)
+#define LAST_BUZZ_DURATION_TICKS        (TICKS_PER_SECOND / 2)
+#define LONG_BUZZ_DURATION_TICKS        (TICKS_PER_SECOND / 1)
+#define LONG_BUZZ_WAIT_DURATION_TICKS   (TICKS_PER_SECOND / 1)
 
 #define CLAMP(x, min, max) ((x) > (max) ? (max) : ((x) < (min) ? (min) : (x)))
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
 
 enum {
-    BUZZ_IDLE,
+    BUZZ_IDLE = 0,
     BUZZ,
+    LAST_BUZZ,
     LONG_BUZZ,
     BUZZ_WAIT,
+    LONG_BUZZ_WAIT,
 };
 
 static struct {
@@ -57,17 +64,24 @@ static struct {
 static void enqueue_buzzes(int n) {
     if (n < 0) {
         rb_enqueue(module.buzzes, LONG_BUZZ);
+        rb_enqueue(module.buzzes, BUZZ_WAIT);
         n = -n;
     }
+
+    printf("Enqueueing %d\n", n);
 
     // one additional buzz
     rb_enqueue(module.buzzes, BUZZ);
 
     while (n--) {
-        rb_enqueue(module.buzzes, BUZZ);
+        rb_enqueue(module.buzzes, BUZZ_WAIT);
+        if (n == 0)
+            rb_enqueue(module.buzzes, LAST_BUZZ);
+        else
+            rb_enqueue(module.buzzes, BUZZ);
     }
 
-    rb_enqueue(module.buzzes, BUZZ_WAIT);
+    rb_enqueue(module.buzzes, LONG_BUZZ_WAIT);
 }
 
 static void move_handler(void *aux_data, const uint8_t *message, size_t len) {
@@ -80,20 +94,21 @@ static void move_handler(void *aux_data, const uint8_t *message, size_t len) {
     int col1 = message[2] - 'a';
     int row1 = message[3] - '1';
 
-    enqueue_buzzes(col0);
-
 #if PLAYING == BLACK
+    enqueue_buzzes(7 - col0);
     enqueue_buzzes(7 - row0);
 #else
+    enqueue_buzzes(col0);
     enqueue_buzzes(row0);
 #endif
 
-    enqueue_buzzes(col1 - col0);
+    enqueue_buzzes(PLAYING * (col1 - col0));
     enqueue_buzzes(PLAYING * (row1 - row0));
 }
 
 int main(void) {
     gpio_init();
+    uart_init();
     interrupts_init();
     interrupts_global_enable();
 
@@ -108,9 +123,14 @@ int main(void) {
     // In ticks
     unsigned long buzzer_start = 0;
     unsigned long buzzer_duration = 0;
-    unsigned long buzzer_period = 0;
-    unsigned long last_buzzer_mod = 0;
+
+    unsigned long buzzer_next_pulse_time = 0;
+
+    int buzzer_pulse_a = SERVO_PULSE_LONG_USEC;
+    int buzzer_pulse_b = SERVO_PULSE_SHORT_USEC;
+
     int buzzer_status = BUZZ_IDLE;
+    bool buzz_waiting = false;
 
     int cw = 0;
     int ccw = 0;
@@ -120,30 +140,12 @@ int main(void) {
 
     while (1) {
         // rotary encoder
-        re_event_t event = re_read(module.re);
+        re_event_t *event = re_read(module.re);
 
-        switch (event) {
-            case RE_EVENT_CLOCKWISE:
-                cw++;
-                last_re_event = timer_get_ticks();
-                break;
-
-            case RE_EVENT_COUNTERCLOCKWISE:
-                ccw++;
-                last_re_event = timer_get_ticks();
-                break;
-
-            case RE_EVENT_PUSH:
-                {
-                    uint8_t buf[] = { cursor & 0xFF };
-                    jnxu_send(CMD_CURSOR, buf, sizeof(buf));
-                    cursor = 0;
-                }
-                break;
-
-            case RE_EVENT_NONE:
-            default:
-                if (timer_get_ticks() - last_re_event > RE_TIMEOUT_USEC * TICKS_PER_USEC) {
+        while (event) {
+last_update:
+            if (event->ticks - last_re_event > RE_TIMEOUT_USEC * TICKS_PER_USEC) {
+                if (MAX(ccw, cw) > MIN_TICKS) {
                     if (ccw > cw)
                         cursor--;
                     else
@@ -155,20 +157,73 @@ int main(void) {
                     uint8_t buf[] = { cursor & 0xFF };
                     jnxu_send(CMD_CURSOR, buf, sizeof(buf));
                 }
-                break;
+
+                cw = ccw = 0;
+            }
+
+            switch (event->type) {
+                case RE_EVENT_CLOCKWISE:
+                    printf("+\n");
+                    cw++;
+                    last_re_event = event->ticks;
+                    break;
+
+                case RE_EVENT_COUNTERCLOCKWISE:
+                    printf("-\n");
+                    ccw++;
+                    last_re_event = event->ticks;
+                    break;
+
+                case RE_EVENT_PUSH:
+                    {
+                        uint8_t buf[] = { cursor & 0xFF };
+                        printf("Sending (%d)\n", cursor);
+                        jnxu_send(CMD_CURSOR, buf, sizeof(buf));
+                        cursor = 0;
+                    }
+                    break;
+
+                case RE_EVENT_NONE:
+                    goto back_from_last_update;
+
+                default:
+                    break;
+            }
+
+            free(event);
+            event = re_read(module.re);
         }
+
+        re_event_t phony_event = {
+            .ticks = timer_get_ticks(),
+            .type = RE_EVENT_NONE
+        };
+
+        event = &phony_event;
+        goto last_update;
+back_from_last_update:
 
         // buzzer
         if (buzzer_status != BUZZ_IDLE) {
-            unsigned long dt = timer_get_ticks() - buzzer_start;
+            unsigned long now = timer_get_ticks();
+            unsigned long dt = now - buzzer_start;
+
             if (dt > buzzer_duration) {
                 buzzer_status = BUZZ_IDLE;
-            } else {
-                unsigned long mod = dt % buzzer_period;
-                if (mod < last_buzzer_mod) {
-                    gpio_write(SERVO_PIN, !gpio_read(SERVO_PIN));
+            } else if (!buzz_waiting) {
+                if (now > buzzer_next_pulse_time) {
+                    gpio_write(SERVO_PIN, 1);
+                    timer_delay_us(buzzer_pulse_a);
+                    gpio_write(SERVO_PIN, 0);
+
+                    buzzer_next_pulse_time = timer_get_ticks() + (
+                            SERVO_PERIOD_USEC - buzzer_pulse_a
+                            ) * TICKS_PER_USEC;
+
+                    int tmp = buzzer_pulse_a;
+                    buzzer_pulse_a = buzzer_pulse_b;
+                    buzzer_pulse_b = tmp;
                 }
-                last_buzzer_mod = mod;
             }
         } else if (!rb_empty(module.buzzes)) {
             assert(rb_dequeue(module.buzzes, &buzzer_status));
@@ -177,19 +232,28 @@ int main(void) {
 
             switch (buzzer_status) {
                 case BUZZ:
-                    buzzer_duration = BUZZ_DURATION_USEC;
-                    buzzer_period = BUZZER_PERIOD(BUZZ_FREQ_HZ);
-                    last_buzzer_mod = buzzer_period;
+                    buzzer_duration = BUZZ_DURATION_TICKS;
+                    buzz_waiting = false;
                     break;
                 
+                case LAST_BUZZ:
+                    buzzer_duration = LAST_BUZZ_DURATION_TICKS;
+                    buzz_waiting = false;
+                    break;
+
                 case LONG_BUZZ:
-                    buzzer_duration = LONG_BUZZ_DURATION_USEC;
-                    buzzer_period = BUZZER_PERIOD(LONG_BUZZ_FREQ_HZ);
-                    last_buzzer_mod = buzzer_period;
+                    buzzer_duration = LONG_BUZZ_DURATION_TICKS;
+                    buzz_waiting = false;
                     break;
 
                 case BUZZ_WAIT:
-                    buzzer_duration = WAIT_BUZZ_DURATION_USEC;
+                    buzzer_duration = BUZZ_WAIT_DURATION_TICKS;
+                    buzz_waiting = true;
+                    break;
+
+                case LONG_BUZZ_WAIT:
+                    buzzer_duration = LONG_BUZZ_WAIT_DURATION_TICKS;
+                    buzz_waiting = true;
                     break;
             }
         }
