@@ -145,6 +145,13 @@ int main(void) {
     jnxu_register_handler(CMD_PRESS, button_press, NULL);
     jnxu_register_handler(CMD_RESET_MOVE, reset_move, NULL);
 
+    // if white, then read first move from stockfish first
+    if (PLAYING == WHITE) {
+        char *your_move = chess_get_move();
+        chess_gui_update(your_move);
+        jnxu_send(CMD_MOVE, (const uint8_t *)your_move, 6);
+    }
+
     while (1) {
     }
 }

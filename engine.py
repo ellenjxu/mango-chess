@@ -32,8 +32,8 @@ def get_move():
     return move
 
 def send_move(move):
-    best_move += "\n"
-    ser.write(best_move.encode())
+    move += "\n"
+    ser.write(move.encode())
 
 with serial.Serial(SERIAL_PORT, 115200, timeout=1) as ser:
     # try:
