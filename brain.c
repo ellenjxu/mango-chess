@@ -35,7 +35,6 @@ static void update_cursor(void *aux_data, const uint8_t *message, size_t len) {
     if (len < 1) return;
 
     int motion = (message[0] == MOTION_CW) ? 1 : -1;
-    uart_putchar(message[0]);
 
     switch (module.state) {
         case LISTENING_X0:
@@ -93,10 +92,10 @@ static void button_press(void *aux_data, const uint8_t *message, size_t len) {
                 char opp_move[6];
 
 #if PLAYING == BLACK
-                move[0] = 'h' - module.move[0];
-                move[1] = '8' - module.move[1];
-                move[2] = 'h' - module.move[2];
-                move[3] = '8' - module.move[3];
+                opp_move[0] = 'h' - module.move[0];
+                opp_move[1] = '8' - module.move[1];
+                opp_move[2] = 'h' - module.move[2];
+                opp_move[3] = '8' - module.move[3];
 #else
                 opp_move[0] = 'a' + module.move[0];
                 opp_move[1] = '1' + module.move[1];
@@ -136,7 +135,7 @@ int main(void) {
     uart_init();
 
     chess_gui_init();
-    chess_init();
+    // chess_init();
     // chess_gui_print();
 
     jnxu_init(BT_MODE, BT_MAC);
