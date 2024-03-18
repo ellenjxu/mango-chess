@@ -39,7 +39,6 @@
 #define LONG_BUZZ_DURATION_TICKS        (TICKS_PER_SECOND / 1)
 #define LONG_BUZZ_WAIT_DURATION_TICKS   (TICKS_PER_SECOND / 1)
 
-#define CLAMP(x, min, max) ((x) > (max) ? (max) : ((x) < (min) ? (min) : (x)))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
 enum {

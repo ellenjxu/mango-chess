@@ -11,6 +11,7 @@
 
 #define BT_MODE BT_EXT_ROLE_SUBORDINATE
 #define BT_MAC  NULL
+#define CLAMP(x, min, max) ((x) > (max) ? (max) : ((x) < (min) ? (min) : (x)))
 
 typedef enum {
     LISTENING_X0,
@@ -32,26 +33,25 @@ static const char promotion_piece_names[] = {'q', 'r', 'b', 'n'};
 static void update_cursor(void *aux_data, const uint8_t *message, size_t len) {
     if (len < 1) return;
 
-    int position = message[0];
+    int motion = (message[0] == MOTION_CW) ? 1 : -1;
 
     switch (module.state) {
         case LISTENING_X0:
-            module.cursor_x = position;
-            break;
         case LISTENING_X1:
-            module.cursor_x += position;
+            module.cursor_x += motion;
             break;
         case LISTENING_Y0:
-            module.cursor_y = position;
-            break;
         case LISTENING_Y1:
-            module.cursor_y += position;
+            module.cursor_y += motion;
             break;
         case LISTENING_PROMOTION:
-            module.cursor_x = position;
+            module.cursor_x += motion;
             module.cursor_y = 0;
             break;
     }
+
+    module.cursor_x = CLAMP(module.cursor_x, 0, 7);
+    module.cursor_y = CLAMP(module.cursor_y, 0, 7);
 
 #if PLAYING == WHITE
     int visual_cursor_x = module.cursor_x;
