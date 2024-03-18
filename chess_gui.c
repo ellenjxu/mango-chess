@@ -33,6 +33,9 @@
 #define PIECE_BLACK GL_BLACK
 #define PIECE_WHITE GL_WHITE
 
+#define THIN_CURSOR     3
+#define THICK_CURSOR    5
+
 #if THEME == MANGO
 #define CHESS_BLACK gl_color(188,  81, 150)
 #define CHESS_WHITE gl_color(243, 216, 95)
@@ -65,9 +68,16 @@ static chess_gui_piece_t board[CHESS_SIZE][CHESS_SIZE];
 static chess_gui_piece_t taken[4 * CHESS_SIZE];
 static int taken_count = 0;
 
-static int chosen_piece_row;
-static int chosen_piece_col;
-static int chosen_piece = XX;
+static bool stale[CHESS_SIZE][CHESS_SIZE];
+
+static struct {
+    int chosen_row;
+    int chosen_col;
+    bool has_chosen;
+
+    int row;
+    int col;
+} cursor;
 
 static bool is_white(chess_gui_piece_t piece) {
     switch (piece) {
@@ -83,11 +93,28 @@ static bool is_white(chess_gui_piece_t piece) {
     }
 }
 
+/*
+* Draws a border around a rectangle.
+*/
+static void draw_border(int x, int y, int width, int height, int thickness, color_t color) {
+    gl_draw_rect(x, y, width, thickness, color);
+    gl_draw_rect(x, y, thickness, height, color);
+    gl_draw_rect(x + width - thickness, y, thickness, height, color);
+    gl_draw_rect(x, y + height - thickness, width, thickness, color);
+}
+
+static void stale_everything(void) {
+    memset(stale, true, sizeof(memset));
+}
+
 void chess_gui_draw(void) {
     // draw the chess board
     for (int row = 0; row < 8; row++) {
         int black_square = row % 2;
         for (int col = 0; col < 8; col++) {
+            if (!stale[row][col])
+                continue;
+
             gl_draw_rect(
                     SQUARE_SIZE*col,
                     SQUARE_SIZE*row,
@@ -96,12 +123,34 @@ void chess_gui_draw(void) {
                     black_square ? CHESS_BLACK : CHESS_WHITE
                     );
 
-            gl_draw_char(
-                    SQUARE_SIZE*col + SQUARE_SIZE / 2 - gl_get_char_width() / 2,
-                    SQUARE_SIZE*row + SQUARE_SIZE / 2 - gl_get_char_height() / 2,
-                    chess_gui_piece_names[board[row][col]],
-                    is_white(board[row][col]) ? PIECE_WHITE : PIECE_BLACK
-                    );
+            if (row == cursor.row && col == cursor.col && cursor.has_chosen) {
+                gl_draw_char(
+                        SQUARE_SIZE*col + SQUARE_SIZE / 2 - gl_get_char_width() / 2,
+                        SQUARE_SIZE*row + SQUARE_SIZE / 2 - gl_get_char_height() / 2,
+                        chess_gui_piece_names[board[row][col]],
+                        CURSOR_COLOR
+                        );
+            } else if (row == cursor.chosen_row && row == cursor.chosen_col && cursor.has_chosen) {
+                // draw nothing
+            } else {
+                gl_draw_char(
+                        SQUARE_SIZE*col + SQUARE_SIZE / 2 - gl_get_char_width() / 2,
+                        SQUARE_SIZE*row + SQUARE_SIZE / 2 - gl_get_char_height() / 2,
+                        chess_gui_piece_names[board[row][col]],
+                        is_white(board[row][col]) ? PIECE_WHITE : PIECE_BLACK
+                        );
+            }
+
+            if (row == cursor.row && col == cursor.col) {
+                draw_border(
+                        row * SQUARE_SIZE,
+                        col * SQUARE_SIZE,
+                        SQUARE_SIZE,
+                        SQUARE_SIZE,
+                        cursor.has_chosen ? THIN_CURSOR : THICK_CURSOR,
+                        CURSOR_COLOR
+                        );
+            }
 
             if (row == 7 && SHOW_LETTERS) {
                 gl_draw_char(
@@ -124,42 +173,22 @@ void chess_gui_draw(void) {
     }
 }
 
-/*
-* Draws a border around a rectangle.
-*/
-static void draw_border(int x, int y, int width, int height, int thickness, color_t color) {
-    gl_draw_rect(x, y, width, thickness, color);
-    gl_draw_rect(x, y, thickness, height, color);
-    gl_draw_rect(x + width - thickness, y, thickness, height, color);
-    gl_draw_rect(x, y + height - thickness, width, thickness, color);
-}
-
-void chess_gui_draw_cursor(int cursor_x, int cursor_y, bool is_piece_moved) {
-    // update board if piece moved
-    chess_gui_draw();
-
-    if (cursor_x < 0 || cursor_y < 0 || cursor_x > 7 || cursor_y > 7)
-        return;
-
-    int row = cursor_x;
-    int col = CHESS_SIZE - cursor_y - 1;
-
-    int border_thickness = is_piece_moved ? 5 : 3;
-    if (is_piece_moved && chosen_piece == XX) {
-        chosen_piece = board[col][row];
-        chosen_piece_row = row;
-        chosen_piece_col = col;
+void chess_gui_draw_cursor(int cursor_col, int cursor_row, bool is_piece_chosen) {
+    if (is_piece_chosen && !cursor.has_chosen) {
+        cursor.chosen_col = cursor.col;
+        cursor.chosen_row = cursor.row;
     }
 
-    // TODO: if is_piece_moved also move the piece
-    draw_border(
-        row * SQUARE_SIZE,
-        col * SQUARE_SIZE,
-        SQUARE_SIZE,
-        SQUARE_SIZE,
-        border_thickness,
-        CURSOR_COLOR
-    );
+    stale[cursor.row][cursor.col] = true;
+
+    cursor.has_chosen = is_piece_chosen;
+
+    cursor.col = cursor_col;
+    cursor.row = CHESS_SIZE - cursor_row - 1;
+
+    stale[cursor.row][cursor.col] = true;
+
+    chess_gui_draw();
 }
 
 void chess_gui_update(const char *move) {
@@ -233,6 +262,7 @@ void chess_gui_update(const char *move) {
 
     board[row1][col1] = XX;
 
+    stale_everything();
     chess_gui_draw();
 }
 
@@ -250,5 +280,6 @@ void chess_gui_print(void) {
 void chess_gui_init(void) {
     gl_init(SCREEN_WIDTH, SCREEN_HEIGHT, GL_SINGLEBUFFER);
     memcpy(board, STARTING_BOARD, sizeof(STARTING_BOARD));
+    stale_everything();
     chess_gui_draw();
 }

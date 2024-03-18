@@ -374,8 +374,10 @@ void bt_ext_connect(const bt_ext_role_t role, const char *mac) {
         return;
 
     if (module.role == BT_EXT_ROLE_PRIMARY) {
-        // Send connection command.
+        bt_ext_send_cmd("AT+ERASE", NULL, 0);
+        bt_ext_send_cmd("AT+CLEAR", NULL, 0);
 
+        // Send connection command.
         char buf[32]; // 32 is enough for "AT+CON" + 12 (mac) + 1 (\0)
 
         buf[0] = '\0'; // Set to null character for strlcat
@@ -466,7 +468,6 @@ void bt_ext_init(void) {
     static const char *CONFIG_COMMANDS[] = {
         "AT",       // closes any open connections
         "AT+RESET", // reset module
-        "AT+CLEAR", // idk why but we need this
         "AT+NOTI1", // enable notifications (OK+CONN and OK+LOST)
     };
 
