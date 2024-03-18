@@ -28,10 +28,12 @@ def get_move():
         if start == "MOVE_BEGIN":
             move = ser.readline().decode("ascii").strip()
             break
-    print(move)
+    print("Opp move: ", move)
     return move
 
 def send_move(move):
+    if len(move) > 5: # brain.c reads max 5 chars
+        raise Exception("Move too long")
     move += "\n"
     ser.write(move.encode())
 
@@ -49,9 +51,14 @@ with serial.Serial(SERIAL_PORT, 115200, timeout=1) as ser:
 
     while True:
         opp_move = get_move().strip()
-        stockfish.make_moves_from_current_position([opp_move])
-        best_move = stockfish.get_best_move()
+        try:
+            stockfish.make_moves_from_current_position([opp_move])
+        except:
+            print("Invalid move")
+            send_move("NOPE")
+            continue
 
+        best_move = stockfish.get_best_move()
         if best_move is None:
             best_move = "MATE"
         else:
