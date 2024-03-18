@@ -198,7 +198,7 @@ static void reset_cursor(void) {
     cursor.chosen_row = 0;
     cursor.col = 0;
 
-#if PLAYING == BLACK
+#if PLAYING == WHITE
     cursor.row = 0;
 #else
     cursor.row = CHESS_SIZE - 1;

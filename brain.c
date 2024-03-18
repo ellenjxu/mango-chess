@@ -149,6 +149,7 @@ int main(void) {
     jnxu_register_handler(CMD_PRESS, button_press, NULL);
     jnxu_register_handler(CMD_RESET_MOVE, reset_move, NULL);
 
+    reset_cursor();
     chess_gui_init();
     chess_init();
     // chess_gui_print();
