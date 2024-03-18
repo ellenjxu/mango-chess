@@ -118,7 +118,6 @@ int main(void) {
 
     chess_gui_init();
     chess_init();
-
     // chess_gui_print();
 
     jnxu_init(BT_MODE, BT_MAC);
@@ -127,15 +126,6 @@ int main(void) {
     jnxu_register_handler(CMD_PRESS, button_press, NULL);
     jnxu_register_handler(CMD_RESET_MOVE, reset_move, NULL);
 
-    // test
-    update_cursor(NULL, (const uint8_t[]){3}, 1);
-    // chess_gui_draw_cursor(0, 0, false);
-    // timer_delay(5);
-    // chess_gui_draw_cursor(1, 1, false);
-    // chess_gui_draw_cursor(1, 2, true);
-
     while (1) {
-        // at some point:
-        // jnxu_send(CMD_MOVE, POINTER TO STOCKFISH COMMAND, LENGTH);
     }
 }
