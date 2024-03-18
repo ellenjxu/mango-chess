@@ -14,7 +14,7 @@
 #define CLAMP(x, min, max) ((x) > (max) ? (max) : ((x) < (min) ? (min) : (x)))
 
 typedef enum {
-    LISTENING_X0 = 0,
+    LISTENING_X0,
     LISTENING_Y0,
     LISTENING_X1,
     LISTENING_Y1,
@@ -24,18 +24,17 @@ typedef enum {
 static struct {
     volatile int cursor_x;
     volatile int cursor_y;
-    volatile int cursor_promotion;
     volatile brain_state_t state;
-    int move[5];
+    char move[6];
 } module;
 
-static const char promotion_piece_names[] = { 'r', 'n', 'b', 'q', 'q', 'b', 'n', 'r' };
+// static const char promotion_piece_names[] = {'q', 'r', 'b', 'n'};
 
 static void update_cursor(void *aux_data, const uint8_t *message, size_t len) {
     if (len < 1) return;
 
     int motion = (message[0] == MOTION_CW) ? 1 : -1;
-    uart_putchar(message[0]);
+    // uart_putchar(message[0]);
 
     switch (module.state) {
         case LISTENING_X0:
@@ -47,77 +46,59 @@ static void update_cursor(void *aux_data, const uint8_t *message, size_t len) {
             module.cursor_y += motion;
             break;
         case LISTENING_PROMOTION:
-            // TODO fancy popup promotion
-            module.cursor_promotion += motion;
+            module.cursor_x += motion;
+            module.cursor_y = 0;
             break;
     }
 
     module.cursor_x = CLAMP(module.cursor_x, 0, 7);
     module.cursor_y = CLAMP(module.cursor_y, 0, 7);
-    module.cursor_promotion = CLAMP(module.cursor_promotion, -1, 7);
+
+#if PLAYING == WHITE
+    int visual_cursor_x = module.cursor_x;
+    int visual_cursor_y = module.cursor_y;
+#else
+    int visual_cursor_x = CHESS_SIZE - module.cursor_x - 1;
+    int visual_cursor_y = CHESS_SIZE - module.cursor_y - 1;
+#endif
 
     bool is_piece_moved = module.state == LISTENING_X1 || module.state == LISTENING_Y1;
-    int visual_cursor_x, visual_cursor_y;
-
-    if (module.state == LISTENING_PROMOTION) {
-        visual_cursor_x = module.cursor_promotion;
-        visual_cursor_y = 0;
-    } else {
-#if PLAYING == WHITE
-        visual_cursor_x = module.cursor_x;
-        visual_cursor_y = module.cursor_y;
-#else
-        visual_cursor_x = CHESS_SIZE - module.cursor_x - 1;
-        visual_cursor_y = CHESS_SIZE - module.cursor_y - 1;
-#endif
-    }
 
     chess_gui_draw_cursor(visual_cursor_x, visual_cursor_y, is_piece_moved);
 }
 
 static void button_press(void *aux_data, const uint8_t *message, size_t len) {
-    switch (module.state) {
-        case LISTENING_X0:
-        case LISTENING_X1:
-            module.move[module.state] = module.cursor_x;
-            break;
+    // store move
+    if (module.state == LISTENING_X0 || module.state == LISTENING_X1) {
+        module.move[module.state] = module.cursor_x;
+    } else {
+        module.move[module.state] = module.cursor_y;
+    }
+    
+    if (module.state == LISTENING_PROMOTION) {  // end of move
+        char opp_move[6];
+        opp_move[0] = 'a' + module.move[0];
+        opp_move[2] = 'a' + module.move[2];
         
-        case LISTENING_Y1:
-            module.cursor_promotion = -1;
-        case LISTENING_Y0:
-            module.move[module.state] = module.cursor_x;
-            break;
+        if (PLAYING == BLACK) {
+            opp_move[1] = '8' - module.move[1];
+            opp_move[3] = '8' - module.move[3];
+        } else {
+            opp_move[1] = '1' + module.move[1];
+            opp_move[3] = '1' + module.move[3];
+        }
 
-        case LISTENING_PROMOTION:
-            {
-                char move[6];
-
-#if PLAYING == BLACK
-                move[0] = 'h' - module.move[0];
-                move[1] = '8' - module.move[1];
-                move[2] = 'h' - module.move[2];
-                move[3] = '8' - module.move[3];
-#else
-                move[0] = 'a' + module.move[0];
-                move[1] = '1' + module.move[1];
-                move[2] = 'a' + module.move[2];
-                move[3] = '1' + module.move[3];
-#endif
-
-                if (module.cursor_promotion >= 0) { // if position = 0, no promotion. TODO: do we want to double press?
-                    move[4] = promotion_piece_names[module.cursor_promotion];
-                    move[5] = '\n';
-                } else {
-                    move[4] = '\n';
-                }
-
-                chess_send_move(move); // send move to stockfish
-                chess_gui_update(move);
-                char *new_move = chess_get_move(); // get stockfish move
-                chess_gui_update(new_move);
-                jnxu_send(CMD_MOVE, (const uint8_t *)new_move, 6); // send stockfish move to hand
-            }
-            break;
+        // if (position) { // if position = 0, no promotion. TODO: do we want to double press?
+        //     move[4] = promotion_piece_names[position - 1];
+        //     move[5] = '\n';
+        // } else {
+        //     move[4] = '\n';
+        // }
+        chess_send_move(opp_move); // send opp move to stockfish
+        chess_gui_update(opp_move);
+        char *your_move = chess_get_move(); // get stockfish move
+        chess_gui_update(your_move);
+        jnxu_send(CMD_MOVE, (const uint8_t *)your_move, 6); // send stockfish move to hand
     }
 
     module.state = (module.state + 1) % 5; // next state
@@ -136,6 +117,7 @@ int main(void) {
     uart_init();
 
     chess_gui_init();
+    chess_init();
 
     // chess_gui_print();
 

@@ -14,7 +14,7 @@
 #include "strings.h"
 #include "timer.h"
 
-#define BT_DEBUG 1
+// #define BT_DEBUG 1
 
 #if BT_DEBUG == 1
 #include "printf.h"

@@ -1,4 +1,4 @@
-/* reads from UART to get the next chess move */
+/* Module for communicating to Stockfish `engine.py` via UART. */
 
 #include "chess.h"
 #include "uart.h"
@@ -7,6 +7,7 @@
 #include "strings.h"
 
 char *chess_get_move(void) {
+    /* Gets the move from Stockfish */
     char *move = malloc(8 * sizeof(char));
 
     int i = 0;
@@ -24,17 +25,17 @@ char *chess_get_move(void) {
 }
 
 void chess_send_move(const char* move) {
-    /* Sends a move (\n terminated)*/
+    /* Sends a move to Stockfish (\n terminated)*/
     uart_putstring("MOVE_BEGIN\n");
     uart_putstring(move);
 }
 
-void chess_init(void) { // TODO: white or black
+void chess_init(void) {
     uart_putstring("GAME_BEGIN\n");
     while (true) {
-        char* start = chess_get_move();
-        if (strcmp(start, "READY\n") == 0) break;
+        char* ack = chess_get_move(); // get the ACK from engine
+        if (strcmp(ack, "READY\n") == 0) break;
     }
-    chess_send_move("e2e4\n");
-    chess_get_move();
+    // chess_send_move("e2e4\n");
+    // chess_get_move();
 }
