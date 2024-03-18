@@ -36,12 +36,16 @@ static void update_cursor(void *aux_data, const uint8_t *message, size_t len) {
 
     switch (module.state) {
         case LISTENING_X0:
-        case LISTENING_X1:
             module.cursor_x = position;
             break;
+        case LISTENING_X1:
+            module.cursor_x += position;
+            break;
         case LISTENING_Y0:
-        case LISTENING_Y1:
             module.cursor_y = position;
+            break;
+        case LISTENING_Y1:
+            module.cursor_y += position;
             break;
         case LISTENING_PROMOTION:
             module.cursor_x = position;
@@ -64,6 +68,8 @@ static void update_cursor(void *aux_data, const uint8_t *message, size_t len) {
 
 static void button_press(void *aux_data, const uint8_t *message, size_t len) {
     if (len < 1) return;
+
+    // uart_putstring("button press\n");
 
     int position = message[0];
     module.move[module.state] = position; // store move
@@ -112,7 +118,6 @@ int main(void) {
     chess_gui_init();
 
     // chess_gui_print();
-    timer_delay(5);
 
     jnxu_init(BT_MODE, BT_MAC);
 
@@ -120,10 +125,12 @@ int main(void) {
     jnxu_register_handler(CMD_PRESS, button_press, NULL);
     jnxu_register_handler(CMD_RESET_MOVE, reset_move, NULL);
 
-    uart_putstring("Brain ready\n");
-
     // test
-    chess_gui_draw_cursor(0, 0, false);
+    update_cursor(NULL, (const uint8_t[]){3}, 1);
+    // chess_gui_draw_cursor(0, 0, false);
+    // timer_delay(5);
+    // chess_gui_draw_cursor(1, 1, false);
+    // chess_gui_draw_cursor(1, 2, true);
 
     while (1) {
         // at some point:

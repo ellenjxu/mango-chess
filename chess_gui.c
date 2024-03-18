@@ -44,6 +44,8 @@
 #define CHESS_WHITE gl_color(238, 238, 213)
 #endif
 
+#define CURSOR_COLOR gl_color(222, 187, 11) // #debb0b lol
+
 static const char chess_gui_piece_names[] = { ' ', 'P', 'N', 'B', 'R', 'Q', 'K', 'p', 'n', 'b', 'r', 'q', 'k' };
 
 // initialize
@@ -63,8 +65,9 @@ static chess_gui_piece_t board[CHESS_SIZE][CHESS_SIZE];
 static chess_gui_piece_t taken[4 * CHESS_SIZE];
 static int taken_count = 0;
 
-static int prev_cursor_row = 7; // start at the bottom of the board
+static int prev_cursor_row = 7; // bottom left
 static int prev_cursor_col = 0;
+static int moving_piece = XX;
 
 static bool is_white(chess_gui_piece_t piece) {
     switch (piece) {
@@ -119,7 +122,6 @@ void chess_gui_draw(void) {
             black_square = !black_square;
         }
     }
-    gl_swap_buffer();
 }
 
 /*
@@ -133,12 +135,13 @@ void gl_draw_border(int x, int y, int width, int height, int thickness, color_t 
 }
 
 void chess_gui_draw_cursor(int cursor_x, int cursor_y, bool is_piece_moved) {
-    // input is x,y from bottom left; invert y
-    // TODO: since we are encoding opponent's move, top left is easier
-    int col = cursor_x;
-    int row = CHESS_SIZE - cursor_y - 1;
+    int row = cursor_x;
+    int col = CHESS_SIZE - cursor_y - 1;
 
-    int border_thickness = 50; // is_piece_moved ? 5 : 50;
+    int border_thickness = is_piece_moved ? 5 : 3;
+    if (is_piece_moved && moving_piece == XX) {
+        moving_piece = board[col][row];
+    }
 
     // TODO: if is_piece_moved also move the piece
     int black_square = (prev_cursor_row + prev_cursor_col) % 2; // fill in prev cursor
@@ -151,14 +154,13 @@ void chess_gui_draw_cursor(int cursor_x, int cursor_y, bool is_piece_moved) {
         black_square ? CHESS_BLACK : CHESS_WHITE
     );
 
-    black_square = (row + col) % 2;
     gl_draw_border(
         row * SQUARE_SIZE,
         col * SQUARE_SIZE,
         SQUARE_SIZE,
         SQUARE_SIZE,
         border_thickness,
-        black_square ? CHESS_WHITE : CHESS_BLACK
+        CURSOR_COLOR
     );
 
     prev_cursor_row = row;
@@ -251,7 +253,7 @@ void chess_gui_print(void) {
 }
 
 void chess_gui_init(void) {
-    gl_init(SCREEN_WIDTH, SCREEN_HEIGHT, GL_DOUBLEBUFFER);
+    gl_init(SCREEN_WIDTH, SCREEN_HEIGHT, GL_SINGLEBUFFER);
     memcpy(board, STARTING_BOARD, sizeof(STARTING_BOARD));
     chess_gui_draw();
 }
