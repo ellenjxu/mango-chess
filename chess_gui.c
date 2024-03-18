@@ -14,6 +14,7 @@
 #include "strings.h"
 #include "timer.h"
 #include "uart.h"
+#include <stdint.h>
 
 #define SCREEN_WIDTH 800
 #define SCREEN_HEIGHT 600
@@ -68,7 +69,7 @@ static chess_gui_piece_t board[CHESS_SIZE][CHESS_SIZE];
 static chess_gui_piece_t taken[4 * CHESS_SIZE];
 static int taken_count = 0;
 
-static bool stale[CHESS_SIZE][CHESS_SIZE];
+static uint8_t stale[CHESS_SIZE][CHESS_SIZE];
 
 static struct {
     int chosen_row;
@@ -104,7 +105,7 @@ static void draw_border(int x, int y, int width, int height, int thickness, colo
 }
 
 static void stale_everything(void) {
-    memset(stale, true, sizeof(memset));
+    memset(stale, 1, sizeof(memset));
 }
 
 void chess_gui_draw(void) {
@@ -179,14 +180,14 @@ void chess_gui_draw_cursor(int cursor_col, int cursor_row, bool is_piece_chosen)
         cursor.chosen_row = cursor.row;
     }
 
-    stale[cursor.row][cursor.col] = true;
+    stale[cursor.row][cursor.col] = 1;
 
     cursor.has_chosen = is_piece_chosen;
 
     cursor.col = cursor_col;
     cursor.row = CHESS_SIZE - cursor_row - 1;
 
-    stale[cursor.row][cursor.col] = true;
+    stale[cursor.row][cursor.col] = 1;
 
     chess_gui_draw();
 }
