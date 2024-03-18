@@ -14,7 +14,7 @@
 #include "strings.h"
 #include "timer.h"
 
-// #define BT_DEBUG 1
+#define BT_DEBUG 1
 
 #if BT_DEBUG == 1
 #include "printf.h"
@@ -415,6 +415,7 @@ bool bt_ext_connected(void) {
             timer_get_ticks() - module.last_rx > CONNECTED_MESSAGE_TIMEOUT_USEC * TICKS_PER_USEC &&
             ringstrcmp(ring.buf, sizeof(ring.buf), ring.nbytes, CONNECTED_MESSAGE, sizeof(CONNECTED_MESSAGE) - 1)) {
         module.connected = true;
+        module.was_ever_connected = true;
     }
 
     return module.connected;

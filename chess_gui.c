@@ -129,7 +129,7 @@ void chess_gui_draw(void) {
                             chess_gui_piece_names[board[cursor.chosen_row][cursor.chosen_col]],
                             CURSOR_COLOR
                             );
-                } else if (row == cursor.chosen_row && row == cursor.chosen_col && cursor.has_chosen) {
+                } else if (row == cursor.chosen_row && col == cursor.chosen_col && cursor.has_chosen) {
                     // draw nothing
                 } else {
                     gl_draw_char(
@@ -174,7 +174,7 @@ void chess_gui_draw(void) {
     }
 }
 
-void chess_gui_draw_cursor(int cursor_row, int cursor_col, bool is_piece_chosen) {
+void chess_gui_draw_cursor(int cursor_col, int cursor_row, bool is_piece_chosen) {
     if (is_piece_chosen && !cursor.has_chosen) {
         cursor.chosen_col = cursor.col;
         cursor.chosen_row = cursor.row;
