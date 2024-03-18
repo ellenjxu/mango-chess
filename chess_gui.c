@@ -105,7 +105,7 @@ static void draw_border(int x, int y, int width, int height, int thickness, colo
 }
 
 static void stale_everything(void) {
-    memset(stale, 1, sizeof(memset));
+    memset(stale, 1, sizeof(stale));
 }
 
 void chess_gui_draw(void) {
