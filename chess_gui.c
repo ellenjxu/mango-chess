@@ -5,7 +5,6 @@
  * Author: Ellen Xu <ellenjxu@stanford.edu>
  * Author: Javier Garcia Nieto <jgnieto@stanford.edu>
  */
-#include "chess_commands.h"
 #include "chess_gui.h"
 #include "gl.h"
 #include "gpio.h"
