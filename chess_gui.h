@@ -1,6 +1,9 @@
 #ifndef CHESS_GUI_H
 #define CHESS_GUI_H
 
+#ifndef CHESS_SIZE
+#define CHESS_SIZE 8
+#endif
 /*
  * Module for chess GUI. Displays a chess board on the screen. Includes
  * function to update UI based on new move.
@@ -9,9 +12,7 @@
  * Author: Javier Garcia Nieto <jgnieto@stanford.edu>
  */
 
-#ifndef CHESS_SIZE
-#define CHESS_SIZE 8
-#endif
+#include <stdbool.h>
 
 typedef enum {
     XX = 0, // empty square
@@ -34,6 +35,15 @@ typedef enum {
  * `chess_gui_draw` draws the chess board on the screen.
  */
 void chess_gui_draw(void);
+
+/*
+ * `chess_gui_draw_cursor` draws a border for cursor at the given position.
+ *
+ * @param x                 the x position of the cursor
+ * @param y                 the y position of the cursor
+ * @param is_piece_moved    whether the piece has been moved
+ */
+void chess_gui_draw_cursor(int x, int y, bool is_piece_moved);
 
 /*
  * `chess_gui_update` updates the UI based on the new move.

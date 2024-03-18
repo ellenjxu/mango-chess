@@ -259,4 +259,3 @@ back_from_last_update:
         }
     }
 }
-
