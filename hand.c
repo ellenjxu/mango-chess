@@ -131,8 +131,6 @@ int main(void) {
     int ccw = 0;
     unsigned long last_re_event = 0;
 
-    int cursor = 0;
-
     while (1) {
         // rotary encoder
         re_event_t *event = re_read(module.re);
@@ -141,15 +139,15 @@ int main(void) {
 last_update:
             if (event->ticks - last_re_event > RE_TIMEOUT_USEC * TICKS_PER_USEC) {
                 if (MAX(ccw, cw) > MIN_TICKS) {
-                    if (ccw > cw)
-                        cursor--;
-                    else
-                        cursor++;
-
-                    cursor = CLAMP(cursor, 0, 7);
-
                     // send cursor packet
-                    uint8_t buf[] = { cursor & 0xFF };
+                    uint8_t motion;
+                    if (cw > ccw)
+                        motion = MOTION_CW;
+                    else
+                        motion = MOTION_CCW;
+
+                    uint8_t buf[] = { motion };
+
                     jnxu_send(CMD_CURSOR, buf, sizeof(buf));
                 }
 
@@ -171,10 +169,8 @@ last_update:
 
                 case RE_EVENT_PUSH:
                     {
-                        uint8_t buf[] = { cursor & 0xFF };
-                        printf("Sending (%d)\n", cursor);
-                        jnxu_send(CMD_PRESS, buf, sizeof(buf));
-                        cursor = 0;
+                        printf("Sending Button\n");
+                        jnxu_send(CMD_PRESS, NULL, 0);
                     }
                     break;
 
