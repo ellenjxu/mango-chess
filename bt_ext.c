@@ -14,6 +14,12 @@
 #include "strings.h"
 #include "timer.h"
 
+#define BT_DEBUG 1
+
+#if BT_DEBUG == 1
+#include "printf.h"
+#endif
+
 // UART configuration
 #define UART_TX GPIO_PB2
 #define UART_RX GPIO_PB3
@@ -187,7 +193,9 @@ static uint8_t recv_uart(void) {
     }
 
     // TEST
-    // printf("%c", byte);
+#if BT_DEBUG == 1
+    printf("%c", byte);
+#endif
 
     return byte;
 }
@@ -303,7 +311,9 @@ void bt_ext_send_raw_byte(const uint8_t byte) {
     module.uart->regs.thr = byte;
 
     // TEST
-    // printf("%c", byte);
+#if BT_DEBUG == 1
+    printf("%c", byte);
+#endif
 }
 
 void bt_ext_send_raw_str(const char *buf) {
