@@ -138,7 +138,7 @@ static void button_press(void *aux_data, const uint8_t *message, size_t len) {
     module.state = (module.state + 1) % 5; // next state
 
     if (module.state == LISTENING_X1) { // show selected on button bress
-        chess_gui_draw_cursor(module.cursor_x, module.cursor_y, true);
+        paint_cursor();
     }
 }
 
