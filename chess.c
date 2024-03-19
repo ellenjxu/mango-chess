@@ -5,6 +5,7 @@
 #include "malloc.h"
 #include "printf.h"
 #include "strings.h"
+#include "chess_commands.h"
 
 char *chess_get_move(void) {
     /* Gets the move from Stockfish */
@@ -26,16 +27,18 @@ char *chess_get_move(void) {
 
 void chess_send_move(const char* move) {
     /* Sends a move to Stockfish (\n terminated)*/
-    uart_putstring("MOVE_BEGIN\n");
+    uart_putstring("\nMOVE_BEGIN\n");
     uart_putstring(move);
 }
 
 void chess_init(void) {
-    uart_putstring("GAME_BEGIN\n");
+#if PLAYING == BLACK
+    uart_putstring("\nGAME_BLACK\n");
+#else
+    uart_putstring("\nGAME_WHITE\n");
+#endif
     while (true) {
         char* ack = chess_get_move(); // get the ACK from engine
         if (strcmp(ack, "READY\n") == 0) break;
     }
-    // chess_send_move("e2e4\n");
-    // chess_get_move();
 }

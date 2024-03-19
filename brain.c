@@ -6,6 +6,7 @@
 #include "uart.h"
 #include "chess.h"
 #include "chess_gui.h"
+#include "strings.h"
 #include <stddef.h>
 #include <stdint.h>
 
@@ -37,6 +38,19 @@ static void reset_cursor(void) {
     module.cursor_promotion = 0;
 }
 
+static void paint_cursor(void) {
+    bool is_piece_moved = module.state == LISTENING_X1 || module.state == LISTENING_Y1;
+
+#if PLAYING == WHITE
+    int visual_cursor_x = module.cursor_x;
+    int visual_cursor_y = module.cursor_y;
+#else
+    int visual_cursor_x = CHESS_SIZE - module.cursor_x - 1;
+    int visual_cursor_y = CHESS_SIZE - module.cursor_y - 1;
+#endif
+    chess_gui_draw_cursor(visual_cursor_x, visual_cursor_y, is_piece_moved);
+}
+
 static void update_cursor(void *aux_data, const uint8_t *message, size_t len) {
     if (len < 1) return;
 
@@ -61,23 +75,13 @@ static void update_cursor(void *aux_data, const uint8_t *message, size_t len) {
     module.cursor_y = CLAMP(module.cursor_y, 0, 7);
     module.cursor_promotion = CLAMP(module.cursor_promotion, -1, 7);
 
-    bool is_piece_moved = module.state == LISTENING_X1 || module.state == LISTENING_Y1;
-    int visual_cursor_x, visual_cursor_y;
-
     if (module.state == LISTENING_PROMOTION) {
-        visual_cursor_x = module.cursor_promotion;
-        visual_cursor_y = 0;
+        int visual_cursor_x = module.cursor_promotion;
+        int visual_cursor_y = 0;
+        chess_gui_draw_cursor(visual_cursor_x, visual_cursor_y, false);
     } else {
-#if PLAYING == WHITE
-        visual_cursor_x = module.cursor_x;
-        visual_cursor_y = module.cursor_y;
-#else
-        visual_cursor_x = CHESS_SIZE - module.cursor_x - 1;
-        visual_cursor_y = CHESS_SIZE - module.cursor_y - 1;
-#endif
+        paint_cursor();
     }
-
-    chess_gui_draw_cursor(visual_cursor_x, visual_cursor_y, is_piece_moved);
 }
 
 static void button_press(void *aux_data, const uint8_t *message, size_t len) {
@@ -117,11 +121,16 @@ static void button_press(void *aux_data, const uint8_t *message, size_t len) {
                 }
 
                 chess_send_move(opp_move); // send move to stockfish
-                chess_gui_update(opp_move); // TODO: check if this move is valid before updating
-                char *your_move = chess_get_move(); // get stockfish move (always valid)
-                chess_gui_update(your_move);
-                jnxu_send(CMD_MOVE, (const uint8_t *)your_move, 6); // send stockfish move to hand
+
+                char *your_move = chess_get_move(); // get stockfish move 
+                if (strcmp(your_move, "NOPE\n") != 0) {
+                    chess_gui_update(opp_move);
+                    chess_gui_update(your_move);
+                    jnxu_send(CMD_MOVE, (const uint8_t *)your_move, 6); // send stockfish move to hand
+                }
+
                 reset_cursor();
+                paint_cursor();
             }
             break;
     }
@@ -150,14 +159,16 @@ int main(void) {
     jnxu_register_handler(CMD_RESET_MOVE, reset_move, NULL);
 
     chess_gui_init();
+    reset_cursor();
+    paint_cursor();
     chess_init();
     // chess_gui_print();
 
-    if (PLAYING == WHITE) { // if white, read first move from stockfish
-        char *your_move = chess_get_move();
-        chess_gui_update(your_move);
-        jnxu_send(CMD_MOVE, (const uint8_t *)your_move, 6);
-    }
+#if PLAYING == WHITE
+    char *your_move = chess_get_move();
+    chess_gui_update(your_move);
+    jnxu_send(CMD_MOVE, (const uint8_t *)your_move, 6);
+#endif
 
     while (1) {
     }
