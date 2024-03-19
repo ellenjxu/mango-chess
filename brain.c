@@ -158,16 +158,17 @@ int main(void) {
     jnxu_register_handler(CMD_PRESS, button_press, NULL);
     jnxu_register_handler(CMD_RESET_MOVE, reset_move, NULL);
 
-    reset_cursor();
     chess_gui_init();
+    reset_cursor();
+    paint_cursor();
     chess_init();
     // chess_gui_print();
 
-    if (PLAYING == WHITE) { // if white, read first move from stockfish
-        char *your_move = chess_get_move();
-        chess_gui_update(your_move);
-        jnxu_send(CMD_MOVE, (const uint8_t *)your_move, 6);
-    }
+#if PLAYING == WHITE
+    char *your_move = chess_get_move();
+    chess_gui_update(your_move);
+    jnxu_send(CMD_MOVE, (const uint8_t *)your_move, 6);
+#endif
 
     while (1) {
     }
