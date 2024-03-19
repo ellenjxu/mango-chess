@@ -394,6 +394,11 @@ void bt_ext_connect(const bt_ext_role_t role, const char *mac) {
     } // SUBORDINATE does not need to connect, just wait
 }
 
+void bt_ext_force_set_connected(void) {
+    module.connected = true;
+    module.was_ever_connected = true;
+}
+
 int bt_ext_read(uint8_t *buf, size_t len) {
     for (size_t i = 0; i < len - 1; i++) {
         if (!bt_ext_has_data()) {

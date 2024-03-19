@@ -21,6 +21,8 @@
 #define RECONNECT_CHECKS 10
 #define RECONNECT_RETRIES 1
 
+extern void bt_ext_force_set_connected(void);
+
 enum message_state {
     WAITING_FOR_START = 0,
     READING_COMMAND,
@@ -60,6 +62,20 @@ void jnxu_register_handler(uint8_t cmd, jnxu_handler_t fn, void *aux_data) {
  * @return  `true` if the device is connected, `false` otherwise.
  */
 static bool ensure_connected(void) {
+    if (bt_ext_connected())
+            return true;
+
+    jnxu_ping();
+    unsigned long previous_echo = module.last_echo;
+    unsigned long timeout_time = timer_get_ticks() + (500 * 1000 * TICKS_PER_USEC);
+
+    while (timer_get_ticks() < timeout_time) {
+        if (previous_echo != module.last_echo) {
+            bt_ext_force_set_connected();
+            return true;
+        }
+    }
+
     // TODO: set module to not connected if we have missed an echo
     for (int i = 0; i < RECONNECT_RETRIES; i++) {
         if (bt_ext_connected()) {
@@ -132,10 +148,6 @@ bool jnxu_send(uint8_t cmd, const uint8_t *message, int len) {
 }
 
 bool jnxu_ping(void) {
-    if (!ensure_connected()) {
-        return false;
-    }
-
     module.last_ping = timer_get_ticks();
 
     bt_ext_send_raw_byte(JNXU_PREFIX);

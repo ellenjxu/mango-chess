@@ -79,7 +79,7 @@ static void enqueue_buzzes(int n) {
 }
 
 static void move_handler(void *aux_data, const uint8_t *message, size_t len) {
-    if (len < 5 || message[len - 1] != '\n')
+    if (len < 5 || (message[4] != '\n' && message[5] != '\n'))
         return;
 
     int col0 = message[0] - 'a';
