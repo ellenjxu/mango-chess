@@ -4,7 +4,7 @@
 #define BLACK -1
 #define WHITE 1
 
-#define PLAYING BLACK
+#define PLAYING WHITE
 
 #define MOTION_CW   '+'
 #define MOTION_CCW  '-'

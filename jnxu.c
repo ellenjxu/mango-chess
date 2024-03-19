@@ -65,6 +65,7 @@ static bool ensure_connected(void) {
     if (bt_ext_connected())
             return true;
 
+    // sometimes the card is already connected, so it's best to try a ping first
     jnxu_ping();
     unsigned long previous_echo = module.last_echo;
     unsigned long timeout_time = timer_get_ticks() + (500 * 1000 * TICKS_PER_USEC);
@@ -76,7 +77,6 @@ static bool ensure_connected(void) {
         }
     }
 
-    // TODO: set module to not connected if we have missed an echo
     for (int i = 0; i < RECONNECT_RETRIES; i++) {
         if (bt_ext_connected()) {
             return true;

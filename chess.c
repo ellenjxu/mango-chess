@@ -1,28 +1,25 @@
 /* Module for communicating to Stockfish `engine.py` via UART. */
 
+#include "assert.h"
 #include "chess.h"
 #include "uart.h"
-#include "malloc.h"
 #include "printf.h"
 #include "strings.h"
 #include "chess_commands.h"
 
-char *chess_get_move(void) {
-    /* Gets the move from Stockfish */
-    char *move = malloc(8 * sizeof(char));
+void chess_get_move(char move[], size_t bufsize) {
+    assert(bufsize >= 8);
 
+    /* Gets the move from Stockfish */
     int i = 0;
     char ch;
-    while (1) {
+
+    do {
         ch = uart_getchar();
         move[i++] = ch;
-        
-        if (ch == '\n' || ch == '\0' || i >= 7) {
-            move[i] = '\0';
-            break;
-        }
-    }
-    return move;
+    } while (ch != '\n' && ch != '\0' && i < 7);
+
+    move[i] = '\0';
 }
 
 void chess_send_move(const char* move) {
@@ -32,13 +29,16 @@ void chess_send_move(const char* move) {
 }
 
 void chess_init(void) {
-#if PLAYING == BLACK
-    uart_putstring("\nGAME_BLACK\n");
-#else
+#if PLAYING == WHITE
     uart_putstring("\nGAME_WHITE\n");
+#else
+    uart_putstring("\nGAME_BLACK\n");
 #endif
-    while (true) {
-        char* ack = chess_get_move(); // get the ACK from engine
+    char ack[8];
+
+    while (1) {
+        chess_get_move(ack, sizeof(ack)); // get the ACK from engine
+
         if (strcmp(ack, "READY\n") == 0) break;
     }
 }

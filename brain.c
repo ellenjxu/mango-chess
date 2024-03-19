@@ -101,16 +101,16 @@ static void button_press(void *aux_data, const uint8_t *message, size_t len) {
             {
                 char opp_move[6];
 
-#if PLAYING == BLACK
-                opp_move[0] = 'h' - module.move[0];
-                opp_move[1] = '8' - module.move[1];
-                opp_move[2] = 'h' - module.move[2];
-                opp_move[3] = '8' - module.move[3];
-#else
+#if PLAYING == WHITE
                 opp_move[0] = 'a' + module.move[0];
                 opp_move[1] = '1' + module.move[1];
                 opp_move[2] = 'a' + module.move[2];
                 opp_move[3] = '1' + module.move[3];
+#else
+                opp_move[0] = 'h' - module.move[0];
+                opp_move[1] = '8' - module.move[1];
+                opp_move[2] = 'h' - module.move[2];
+                opp_move[3] = '8' - module.move[3];
 #endif
 
                 if (module.cursor_promotion >= 0) {
@@ -122,7 +122,8 @@ static void button_press(void *aux_data, const uint8_t *message, size_t len) {
 
                 chess_send_move(opp_move); // send move to stockfish
 
-                char *your_move = chess_get_move(); // get stockfish move 
+                char your_move[8];
+                chess_get_move(your_move, sizeof(your_move)); // get stockfish move 
                 if (strcmp(your_move, "NOPE\n") != 0) {
                     chess_gui_update(opp_move);
                     chess_gui_update(your_move);
@@ -165,7 +166,8 @@ int main(void) {
     // chess_gui_print();
 
 #if PLAYING == WHITE
-    char *your_move = chess_get_move();
+    char your_move[8];
+    chess_get_move(your_move, sizeof(your_move));
     chess_gui_update(your_move);
     jnxu_send(CMD_MOVE, (const uint8_t *)your_move, 6);
 #endif
