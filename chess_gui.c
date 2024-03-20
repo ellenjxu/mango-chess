@@ -273,9 +273,9 @@ static void draw_stat(const char *label, char *number, int line) {
 static void sidebar_draw(void) {
     static const char *HEADERS[] = {
         "Mango Chess",
-        "(100% Legit)",
+        "(Totally Legit)",
         "",
-        "Javier&Ellen",
+        "Javier & Ellen",
         "CS107E W2024",
         "",
     };
@@ -317,19 +317,19 @@ static void sidebar_draw(void) {
     line++;
     line++;
 
-    draw_text_centered(
-            "Stats:",
-            SQUARE_SIZE * 8,
-            (char_h + V_PADDING) * line,
-            SCREEN_WIDTH - SQUARE_SIZE * 8,
-            SIDEBAR_FT
-            );
+    // draw_text_centered(
+    //         "Stats:",
+    //         SQUARE_SIZE * 8,
+    //         (char_h + V_PADDING) * line,
+    //         SCREEN_WIDTH - SQUARE_SIZE * 8,
+    //         SIDEBAR_FT
+    //         );
 
-    line++;
+    // line++;
 
-    draw_stat("Win:  ", sidebar.W, line++);
-    draw_stat("Draw: ", sidebar.D, line++);
-    draw_stat("Lose: ", sidebar.L, line++);
+    // draw_stat("Win:  ", sidebar.W, line++);
+    // draw_stat("Draw: ", sidebar.D, line++);
+    // draw_stat("Lose: ", sidebar.L, line++);
 
     line += 2;
 
@@ -344,12 +344,12 @@ static void sidebar_draw(void) {
 
     for (; i < nmoves; i++) {
         gl_draw_string(
-                SQUARE_SIZE * 8 + H_PADDING + (i % 2) * (SCREEN_WIDTH - SQUARE_SIZE) / 2,
+                SQUARE_SIZE * 8 + H_PADDING + (i % 2) * (SCREEN_WIDTH - SQUARE_SIZE*8) / 2,
                 (char_h + V_PADDING) * line,
                 move_history[i],
                 SIDEBAR_FT
                 );
-        line++;
+        if (i%2 == 1) line++;
     }
 
 }
@@ -423,6 +423,8 @@ void chess_gui_draw_cursor(int cursor_col, int cursor_row, bool is_piece_chosen)
     if (is_piece_chosen && !cursor.has_chosen) {
         cursor.chosen_col = cursor.col;
         cursor.chosen_row = cursor.row;
+    } else if (!is_piece_chosen && cursor.has_chosen) {
+        stale_everything();
     }
 
     stale[cursor.row][cursor.col] = 1;
@@ -545,7 +547,7 @@ void chess_gui_print(void) {
 }
 
 void chess_gui_init(void) {
-    gl_init(SCREEN_WIDTH, SCREEN_HEIGHT, GL_DOUBLEBUFFER);
+    gl_init(SCREEN_WIDTH, SCREEN_HEIGHT, GL_SINGLEBUFFER);
     memcpy(board, STARTING_BOARD, sizeof(STARTING_BOARD));
 
     sidebar.W[0] = sidebar.D[0] = sidebar.L[0] = '*';

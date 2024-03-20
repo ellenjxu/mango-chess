@@ -96,7 +96,7 @@ with serial.Serial(SERIAL_PORT, 115200, timeout=1) as ser:
             stockfish.make_moves_from_current_position([best_move])
 
         print("Stockfish move: ", best_move)
-        stats()
+        # stats()
         send_move(best_move)
 
     # except serial.serialutil.SerialException:
