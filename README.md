@@ -17,7 +17,9 @@ One player has a "Hand" MangoPi in their pocket, which is talking to the "Brain"
 Javier:
 
 - Bluetooth JNXU protocol
-- ...
+- Hand Pi (`hand.c`)
+- Chess GUI
+- Rotary encoder and servo peripheries
 
 Ellen:
 
@@ -41,11 +43,4 @@ Moments we're proud of:
 - getting stockfish working! and seeing the moves appear live (e2e4 d7d5 e4xe5 moment... :D)
 - rotary encoder + cursor logic for highlighting which piece is being moved
 
-Any trying or heroic moments you would like to share? Of what are you particularly proud:
-the effort you put into it? the end product? the process you followed?
-what you learned along the way? Tell us about it!
-
 ## Photos
-
-You are encouraged to submit photos/videos of your project in action.
-Add the files and commit to your project repository to include along with your submission.
