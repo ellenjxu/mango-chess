@@ -1,4 +1,10 @@
-/* Module for communicating to Stockfish `engine.py` via UART. */
+/*
+ * Module for communicating to Stockfish `engine.py` via UART.
+ *
+ * See `engine.py` for details on how the protocol works.
+ * 
+ * Author: Ellen Xu <ellenjxu@stanford.edu>
+ */
 
 #include "assert.h"
 #include "chess.h"
@@ -15,9 +21,11 @@ static rb_ptr_t *rb;
 void chess_get_move(char buf[], size_t bufsize) {
     assert(bufsize >= 8);
 
+    // When we receive information from the host laptop, there is a chance that
+    // it might be a command, in which case we enqueue it and jump back to the
+    // top of the function.
     char move[256];
 
-    /* Gets the move from Stockfish */
     int i = 0;
     char ch;
 
@@ -26,23 +34,25 @@ was_command:
         ch = uart_getchar();
         move[i++] = ch;
 
-        if (i >= 7 && move[0] != '/')
+        if (i >= 7 && move[0] != '/')   // if not command and too long, break
             break;
-        else if (i >= sizeof(move) - 1)
+        else if (i >= sizeof(move) - 1) // if command and too long for command
             break;
 
     } while (ch != '\n' && ch != '\0');
 
     move[i] = '\0';
 
-    if (move[0] == '/') {   // command
+    if (move[0] == '/') {   // found command
         char *cmd = malloc(i);
         memcpy(cmd, move + 1, i);
         rb_ptr_enqueue(rb, (uintptr_t)cmd);
-        printf("Enque command: '%s'\n", cmd);
+
+        // caller is expecting a move, so we jump back and see if we get one
         i = 0;
         goto was_command;
     } else {
+        // copy the move to buffer
         memcpy(buf, move, bufsize);
     }
 }
@@ -50,13 +60,10 @@ was_command:
 char *chess_next_command(void) {
     uintptr_t ptr = 0;
     rb_ptr_dequeue(rb, &ptr);
-    if (ptr)
-        printf("Deq command: '%s'\n", (char *)ptr);
     return (char *)ptr;
 }
 
 void chess_send_move(const char* move) {
-    /* Sends a move to Stockfish (\n terminated)*/
     uart_putstring("\nMOVE_BEGIN\n");
     uart_putstring(move);
 }

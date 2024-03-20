@@ -1,3 +1,10 @@
+/*
+ * NOTE: our project typically runs from `brain.c` or `hand.c`, with `make brain`
+ * and `make hand` respectively.
+ * 
+ * This file contains a basic interface to connect to send raw AT commands to
+ * the Bluetooth module back and forth, which is useful for debugging.
+ */
 #include "bt_ext.h"
 #include "gpio.h"
 #include "interrupts.h"

@@ -1,6 +1,7 @@
 /*
  * Module for chess GUI. Displays a chess board on the screen. Includes
- * function to update UI based on new move.
+ * function to update UI based on new move, sidebar, handling of chess rules
+ * like passant, promotion and castling.
  *
  * Author: Ellen Xu <ellenjxu@stanford.edu>
  * Author: Javier Garcia Nieto <jgnieto@stanford.edu>
@@ -315,6 +316,9 @@ static void sidebar_draw(void) {
 
     line += 3;
 
+    // We figured stats where getting in the way of mvoe history, so we have
+    // commented them out:
+
     // draw_text_centered(
     //         "Stats:",
     //         SQUARE_SIZE * 8,
@@ -400,30 +404,25 @@ static void draw_promote(int cursor) {
         "Queen"
     };
 
-    if (0 <= cursor && cursor <= 3) {
-        int char_h = gl_get_char_height();
+    int char_h = gl_get_char_height();
 
-        for (int i = 0; i < 4; i++) {
-            gl_draw_string(
-                    SQUARE_SIZE * 8 + 5,
-                    SQUARE_SIZE * 6 + (char_h + 5) * (i + 1),
-                    PROMOTION_PIECES[i],
-                    cursor == i ? GL_RED : SIDEBAR_FT);
-        }
-    } else {
-        gl_draw_rect(
-                SQUARE_SIZE * 8,
-                SQUARE_SIZE * 6,
-                SCREEN_WIDTH - SQUARE_SIZE * 8,
-                SCREEN_HEIGHT - SQUARE_SIZE * 6,
-                SIDEBAR_BG);
+    for (int i = 0; i < 4; i++) {
+        gl_draw_string(
+                SQUARE_SIZE * 8 + 5,
+                SQUARE_SIZE * 6 + (char_h + 5) * (i + 1),
+                PROMOTION_PIECES[i],
+                cursor == i ? GL_RED : SIDEBAR_FT);
     }
 }
 
 void chess_gui_promote(int cursor) {
-    draw_promote(cursor);
-    gl_swap_buffer();
-    draw_promote(cursor);
+    if (0 <= cursor && cursor <= 3) {
+        draw_promote(cursor);
+        gl_swap_buffer();
+        draw_promote(cursor);
+    } else {
+        chess_gui_sidebar();
+    }
 }
 
 void chess_gui_draw_cursor(int cursor_col, int cursor_row, bool is_piece_chosen) {
@@ -431,6 +430,7 @@ void chess_gui_draw_cursor(int cursor_col, int cursor_row, bool is_piece_chosen)
         cursor.chosen_col = cursor.col;
         cursor.chosen_row = cursor.row;
     } else if (!is_piece_chosen && cursor.has_chosen) {
+        // edge case: easier to just redraw whole board
         stale_everything();
     }
 

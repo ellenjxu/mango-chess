@@ -9,6 +9,10 @@
  * Module for chess GUI. Displays a chess board on the screen. Includes
  * function to update UI based on new move.
  *
+ * For efficiency, the module does its best to only redraw parts of the
+ * chessboard that are stale by keeping track of updates. It also uses
+ * DOUBLEBUFFER to avoid artifacts on the screen.
+ *
  * Author: Ellen Xu <ellenjxu@stanford.edu>
  * Author: Javier Garcia Nieto <jgnieto@stanford.edu>
  */

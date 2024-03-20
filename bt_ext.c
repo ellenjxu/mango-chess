@@ -194,7 +194,6 @@ static uint8_t recv_uart(void) {
         module.connected = false;
     }
 
-    // TEST
 #if BT_DEBUG == 1
     printf("%c", byte);
 #endif
@@ -312,7 +311,6 @@ void bt_ext_send_raw_byte(const uint8_t byte) {
     while ((module.uart->regs.usr & USR_TX_NOT_FULL) == 0) ;
     module.uart->regs.thr = byte;
 
-    // TEST
 #if BT_DEBUG == 1
     printf("%c", byte);
 #endif

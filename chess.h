@@ -5,6 +5,8 @@
  * Module for Stockfish. Communicates over UART with Python script running
  * Stockfish on a powerful machine (the Mango Pi would struggle).
  *
+ * See `engine.py` for details on how the protocol works.
+ *
  * Author: Ellen Xu <ellenjxu@stanford.edu>
  * Author: Javier Garcia Nieto <jgnieto@stanford.edu>
  */

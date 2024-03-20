@@ -1,7 +1,6 @@
 #include "chess_commands.h"
 #include "interrupts.h"
 #include "jnxu.h"
-#include "printf.h"
 #include "malloc.h"
 #include "timer.h"
 #include "uart.h"
@@ -51,7 +50,6 @@ static void paint_cursor(void) {
     int visual_cursor_y = CHESS_SIZE - module.cursor_y - 1;
 #endif
     chess_gui_draw_cursor(visual_cursor_x, visual_cursor_y, is_piece_moved);
-    // printf("Cursor: %d, %d\n", visual_cursor_x, visual_cursor_y);
 }
 
 static void update_cursor(void *aux_data, const uint8_t *message, size_t len) {
@@ -124,7 +122,7 @@ static void button_press(void *aux_data, const uint8_t *message, size_t len) {
 
                 char your_move[8];
                 chess_get_move(your_move, sizeof(your_move)); // get stockfish move 
-                // printf("Your move: %s\n", your_move);
+
                 if (strcmp(your_move, "NOPE\n") != 0) {
                     chess_gui_update(opp_move, false);
                     chess_gui_update(your_move, true);
@@ -139,7 +137,6 @@ static void button_press(void *aux_data, const uint8_t *message, size_t len) {
     }
 
     module.state = (module.state + 1) % 5; // next state
-    // printf("State: %d\n", module.state);
 
     if (module.state == LISTENING_X1) { // show selected on button bress
         paint_cursor();

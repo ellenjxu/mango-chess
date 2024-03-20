@@ -24,6 +24,14 @@
  * flags in a protocol). The user can also call bt_ext_connected to check if the
  * Bluetooth module is connected to a device and, if not, call bt_ext_connect
  * again to try to connect.
+ *
+ * TRIGGERS:
+ * It is sometimes useful to receive an interrupt whenever a certain character
+ * is received. You can register a "trigger" with a particular function which
+ * will be called whenever a certain character is received. Since there is a
+ * risk of the ringbuffer storing incoming data filling up, there also exists
+ * a fallback trigger which will be called after BT_EXT_MAX_BYTES_NO_TRIGGER
+ * is exceeded.
  */
 
 #include <stdbool.h>

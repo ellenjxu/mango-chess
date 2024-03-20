@@ -19,7 +19,7 @@
 
 #define RECONNECT_DELAY_USEC (5 * 1000 * 1000) // 5 seconds
 #define RECONNECT_CHECKS 10
-#define RECONNECT_RETRIES 1
+#define RECONNECT_RETRIES 1 // after much testing, we found retries are typically a bad idea.
 
 extern void bt_ext_force_set_connected(void);
 
@@ -256,5 +256,8 @@ void jnxu_init(bt_ext_role_t role, const char *mac) {
     bt_ext_register_trigger(JNXU_END, process_uart);
     bt_ext_register_trigger(JNXU_PING, process_uart);
     bt_ext_register_trigger(JNXU_ECHO, process_uart);
+
+    // fallback trigger
+    bt_ext_register_fallback_trigger(process_uart);
 }
 
