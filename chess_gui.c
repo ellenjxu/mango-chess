@@ -385,7 +385,7 @@ void chess_gui_stats(char *W, char *D, char *L) {
     chess_gui_sidebar();
 }
 
-void chess_gui_promote(int cursor) {
+static void draw_promote(int cursor) {
     static const char *PROMOTION_PIECES[] = {
         "Rook",
         "Knight",
@@ -411,7 +411,12 @@ void chess_gui_promote(int cursor) {
                 SCREEN_HEIGHT - SQUARE_SIZE * 6,
                 SIDEBAR_BG);
     }
+}
+
+void chess_gui_promote(int cursor) {
+    draw_promote(cursor);
     gl_swap_buffer();
+    draw_promote(cursor);
 }
 
 void chess_gui_draw_cursor(int cursor_col, int cursor_row, bool is_piece_chosen) {
