@@ -325,11 +325,13 @@ static void sidebar_draw(void) {
             SIDEBAR_FT
             );
 
-    line += 3;
+    line++;
 
     draw_stat("Win:  ", sidebar.W, line++);
     draw_stat("Draw: ", sidebar.D, line++);
     draw_stat("Lose: ", sidebar.L, line++);
+
+    line += 2;
 
     int i = nmoves - HISTORY_LINES;
 
@@ -409,6 +411,7 @@ void chess_gui_promote(int cursor) {
                 SCREEN_HEIGHT - SQUARE_SIZE * 6,
                 SIDEBAR_BG);
     }
+    gl_swap_buffer();
 }
 
 void chess_gui_draw_cursor(int cursor_col, int cursor_row, bool is_piece_chosen) {
