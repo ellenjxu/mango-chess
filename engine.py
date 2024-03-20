@@ -18,7 +18,7 @@ else:
 #----------------------------------------------------------------
 
 stockfish = Stockfish(path=STOCKFISH_PATH, depth=20, parameters={
-    "Threads": 2,
+    "Threads": 4,
     "Skill Level": 20,
     "Hash": 2048, # 2GB
     "MultiPV": 1,
@@ -30,20 +30,42 @@ def get_move():
         if start == "MOVE_BEGIN":
             move = ser.readline().decode("ascii").strip()
             break
+        elif start:
+            print("Pi >", start)
     print("Opp move: ", move)
     return move
+
+def send_command(cmd):
+    if (len(cmd) > 128):
+        raise Exception("Command too long")
+    cmd = "/" + cmd + "\n"
+    get_move()
+    print(cmd)
+    ser.write(cmd.encode())
+
+def stats():
+    # evaluate
+    print("Getting stats")
+    WDL = stockfish.get_wdl_stats()
+    if WDL:
+        percentage = lambda x: "{: >2}".format(str(int(x * 100)))
+        W, D, L = WDL
+        pW = percentage(W / (W + D + L))
+        send_command("SW" + pW)
+
+        pD = percentage(D / (W + D + L))
+        send_command("SD" + pD)
+
+        pL = percentage(L / (W + D + L))
+        send_command("SL" + pL)
+    else:
+        print("No WDL stats")
 
 def send_move(move):
     if len(move) > 5: # brain.c reads max 5 chars
         raise Exception("Move too long")
     move += "\n"
     ser.write(move.encode())
-
-def send_command(cmd):
-    if (len(cmd) > 128):
-        raise Exception("Command too long")
-    cmd = "/" + cmd + "\n"
-    ser.write(cmd.encode())
 
 with serial.Serial(SERIAL_PORT, 115200, timeout=1) as ser:
     # try:
@@ -74,21 +96,8 @@ with serial.Serial(SERIAL_PORT, 115200, timeout=1) as ser:
             stockfish.make_moves_from_current_position([best_move])
 
         print("Stockfish move: ", best_move)
+        stats()
         send_move(best_move)
-
-        # evaluate
-        WDL = stockfish.get_wdl_stats()
-        if WDL:
-            percentage = lambda x: int(x * 100)
-            W, D, L = WDL
-            pW = percentage(W / (W + D + L))
-            send_command("SW" + str(pW))
-
-            pD = percentage(D / (W + D + L))
-            send_command("SD" + str(pD))
-
-            pL = percentage(L / (W + D + L))
-            send_command("SL" + str(pL))
 
     # except serial.serialutil.SerialException:
     #     print("Error")

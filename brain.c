@@ -13,6 +13,7 @@
 
 #define BT_MODE BT_EXT_ROLE_SUBORDINATE
 #define BT_MAC  NULL
+
 #define CLAMP(x, min, max) ((x) > (max) ? (max) : ((x) < (min) ? (min) : (x)))
 
 typedef enum {
@@ -192,6 +193,8 @@ int main(void) {
             }
 
             free(cmd);
+        } else {
+            timer_delay(1);
         }
     }
 }

@@ -20,14 +20,14 @@
 #define SCREEN_WIDTH 800
 #define SCREEN_HEIGHT 600
 
-#define SQUARE_SIZE (SCREEN_HEIGHT > SCREEN_WIDTH ? SCREEN_WIDTH/8 : SCREEN_HEIGHT/8)
+#define SQUARE_SIZE (SCREEN_HEIGHT > SCREEN_WIDTH ? SCREEN_WIDTH/9 : SCREEN_HEIGHT/9)
 #define PADDING 2
 
 #define MANGO           0
 #define CHESS_COM_GREEN 1
 #define CHESS_COM_BLUE  2
 
-#define THEME CHESS_COM_BLUE
+#define THEME MANGO
 
 #define SHOW_LETTERS true
 #define SHOW_NUMBERS true
@@ -41,28 +41,33 @@
 #define THIN_CURSOR     3
 #define THICK_CURSOR    5
 
-#define SIDEBAR_PADDING 5
+#define V_PADDING   5
+#define H_PADDING   15
+#define HISTORY_LINES   12
 
 #if THEME == MANGO
 #define CHESS_BLACK gl_color(188,  81, 150)
 #define CHESS_WHITE gl_color(243, 216, 95)
 #define SIDEBAR_FT  gl_color(243, 216, 95)
 #define SIDEBAR_BG  gl_color(  0,   0,   0)
+#define CURSOR_COLOR GL_RED
 #elif THEME == CHESS_COM_BLUE
 #define CHESS_BLACK gl_color( 84, 114, 150)
 #define CHESS_WHITE gl_color(234, 233, 212)
 #define SIDEBAR_FT  gl_color(255, 255, 255)
 #define SIDEBAR_BG  gl_color(  0,   0,   0)
+#define CURSOR_COLOR gl_color(222, 187, 11) // #debb0b lol
 #else
 #define CHESS_BLACK gl_color(124, 149, 93)
 #define CHESS_WHITE gl_color(238, 238, 213)
 #define SIDEBAR_FT  gl_color(255, 255, 255)
 #define SIDEBAR_BG  gl_color(  0,   0,   0)
+#define CURSOR_COLOR gl_color(222, 187, 11) // #debb0b lol
 #endif
 
-#define CURSOR_COLOR gl_color(222, 187, 11) // #debb0b lol
 
 #define SIZE(x) (sizeof(x) / sizeof(*x))
+#define CLAMP(x, min, max) ((x) > (max) ? (max) : ((x) < (min) ? (min) : (x)))
 
 static const char CHESS_GUI_PIECE_NAMES[] = { ' ', 'P', 'N', 'B', 'R', 'Q', 'K', 'p', 'n', 'b', 'r', 'q', 'k' };
 
@@ -122,6 +127,9 @@ static bool is_white(chess_gui_piece_t piece) {
             return false;
     }
 }
+
+static char move_history[512][6];
+static int nmoves;
 
 /*
 * Draws a border around a rectangle.
@@ -245,11 +253,31 @@ static void draw_text_centered(const char *text, int x, int y, int w, color_t co
             );
 }
 
+static void draw_stat(const char *label, char *number, int line) {
+    int char_h = gl_get_char_height();
+
+    char str[64];
+
+    str[0] = '\0';
+    strlcat(str, label, sizeof(str));
+    strlcat(str, sidebar.W, sizeof(str));
+    strlcat(str, "%", sizeof(str));
+    gl_draw_string(
+            SQUARE_SIZE * 8 + H_PADDING,
+            (char_h + V_PADDING) * line,
+            str,
+            SIDEBAR_FT
+            );
+}
+
 static void sidebar_draw(void) {
     static const char *HEADERS[] = {
         "Mango Chess",
-        "Javier & Ellen",
-        "CS107E Winter 2024"
+        "(100% Legit)",
+        "",
+        "Javier&Ellen",
+        "CS107E W2024",
+        "",
     };
 
     gl_draw_rect(
@@ -266,15 +294,13 @@ static void sidebar_draw(void) {
     for (int i = 0; i < SIZE(HEADERS); i++) {
         draw_text_centered(
                 HEADERS[i],
-                SQUARE_SIZE * 8 + SIDEBAR_PADDING,
-                (char_h + SIDEBAR_PADDING) * line,
+                SQUARE_SIZE * 8,
+                (char_h + V_PADDING) * line,
                 SCREEN_WIDTH - SQUARE_SIZE * 8,
                 SIDEBAR_FT
                 );
         line++;
     }
-
-    line++;
 
     draw_text_centered(
 #if PLAYING == WHITE
@@ -282,71 +308,48 @@ static void sidebar_draw(void) {
 #else
             "Playing Black",
 #endif
-            SQUARE_SIZE * 8 + SIDEBAR_PADDING,
-            (char_h + SIDEBAR_PADDING) * line,
+            SQUARE_SIZE * 8,
+            (char_h + V_PADDING) * line,
             SCREEN_WIDTH - SQUARE_SIZE * 8,
             SIDEBAR_FT
             );
 
+    line++;
     line++;
 
     draw_text_centered(
-            "Stats",
-            SQUARE_SIZE * 8 + SIDEBAR_PADDING,
-            (char_h + SIDEBAR_PADDING) * line,
+            "Stats:",
+            SQUARE_SIZE * 8,
+            (char_h + V_PADDING) * line,
             SCREEN_WIDTH - SQUARE_SIZE * 8,
             SIDEBAR_FT
             );
 
-    line++;
+    line += 3;
 
-    char str[64];
+    draw_stat("Win:  ", sidebar.W, line++);
+    draw_stat("Draw: ", sidebar.D, line++);
+    draw_stat("Lose: ", sidebar.L, line++);
 
-    str[0] = '\0';
-    strlcat(str, "Win: ", sizeof(str));
-    strlcat(str, sidebar.W, sizeof(str));
-    strlcat(str, "%", sizeof(str));
-    gl_draw_string(
-            SQUARE_SIZE * 8 + SIDEBAR_PADDING,
-            (char_h + SIDEBAR_PADDING) * line,
-            str,
-            SIDEBAR_FT
-            );
+    int i = nmoves - HISTORY_LINES;
 
-    line++;
+    if (i < 0) {
+        i = 0;
+    } else if (i % 2 != 0) {
+        i++;
+    }
 
-    str[0] = '\0';
-    strlcat(str, "Draw: ", sizeof(str));
-    strlcat(str, sidebar.D, sizeof(str));
-    strlcat(str, "%", sizeof(str));
-    gl_draw_string(
-            SQUARE_SIZE * 8 + SIDEBAR_PADDING,
-            (char_h + SIDEBAR_PADDING) * line,
-            str,
-            SIDEBAR_FT
-            );
 
-    line++;
+    for (; i < nmoves; i++) {
+        gl_draw_string(
+                SQUARE_SIZE * 8 + H_PADDING + (i % 2) * (SCREEN_WIDTH - SQUARE_SIZE) / 2,
+                (char_h + V_PADDING) * line,
+                move_history[i],
+                SIDEBAR_FT
+                );
+        line++;
+    }
 
-    str[0] = '\0';
-    strlcat(str, "Lose: ", sizeof(str));
-    strlcat(str, sidebar.L, sizeof(str));
-    strlcat(str, "%", sizeof(str));
-    gl_draw_string(
-            SQUARE_SIZE * 8 + SIDEBAR_PADDING,
-            (char_h + SIDEBAR_PADDING) * line,
-            str,
-            SIDEBAR_FT
-            );
-
-    // for (int i = 0; i < sidebar.taken_count; i++) {
-    //     gl_draw_char(
-    //             SQUARE_SIZE * 8 + SIDEBAR_PADDING,
-    //             SQUARE_SIZE * 2 + (char_h + SIDEBAR_PADDING) * i,
-    //             CHESS_GUI_PIECE_NAMES[sidebar.taken[i]],
-    //             is_white(sidebar.taken[i]) ? PIECE_WHITE : PIECE_BLACK
-    //             );
-    // }
 }
 
 void chess_gui_sidebar(void) {
@@ -447,6 +450,8 @@ void chess_gui_update(const char *move, bool engine) {
     int row1 = CHESS_SIZE - (move[1] - '1') - 1;
     int row2 = CHESS_SIZE - (move[3] - '1') - 1;
 
+    memcpy(move_history[nmoves++], move, 6);
+
     // keep track of taken pieces
     if (board[row2][col2] != XX) {
         sidebar.taken[sidebar.taken_count++] = board[row2][col2];
@@ -517,6 +522,7 @@ void chess_gui_update(const char *move, bool engine) {
     stale_everything();
     reset_cursor();
     chess_gui_draw();
+    chess_gui_sidebar();
 }
 
 void chess_gui_print(void) {
@@ -537,6 +543,8 @@ void chess_gui_init(void) {
     sidebar.W[0] = sidebar.D[0] = sidebar.L[0] = '*';
     sidebar.W[1] = sidebar.D[1] = sidebar.L[1] = '*';
     sidebar.W[2] = sidebar.D[2] = sidebar.L[2] = '\0';
+
+    nmoves = 0;
 
     stale_everything();
     reset_cursor();

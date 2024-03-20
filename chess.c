@@ -39,6 +39,7 @@ was_command:
         char *cmd = malloc(i);
         memcpy(cmd, move + 1, i);
         rb_ptr_enqueue(rb, (uintptr_t)cmd);
+        printf("Enque command: '%s'\n", cmd);
         i = 0;
         goto was_command;
     } else {
@@ -49,6 +50,8 @@ was_command:
 char *chess_next_command(void) {
     uintptr_t ptr = 0;
     rb_ptr_dequeue(rb, &ptr);
+    if (ptr)
+        printf("Deq command: '%s'\n", (char *)ptr);
     return (char *)ptr;
 }
 
