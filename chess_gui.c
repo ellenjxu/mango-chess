@@ -547,7 +547,7 @@ void chess_gui_print(void) {
 }
 
 void chess_gui_init(void) {
-    gl_init(SCREEN_WIDTH, SCREEN_HEIGHT, GL_SINGLEBUFFER);
+    gl_init(SCREEN_WIDTH, SCREEN_HEIGHT, GL_DOUBLEBUFFER);
     memcpy(board, STARTING_BOARD, sizeof(STARTING_BOARD));
 
     sidebar.W[0] = sidebar.D[0] = sidebar.L[0] = '*';
