@@ -37,4 +37,12 @@ void chess_send_move(const char *move);
  */
 void chess_init(void);
 
+/*
+ * `chess_next_command` returns the next command from the Stockfish engine.
+ *
+ * @return  pointer to the next command from the Stockfish engine. Caller is
+ *          responsible for freeing the memory. NULL if no command available.
+ */
+char *chess_next_command(void);
+
 #endif

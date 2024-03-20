@@ -32,26 +32,39 @@
 #define SHOW_LETTERS true
 #define SHOW_NUMBERS true
 
-#define PIECE_BLACK GL_BLACK
-#define PIECE_WHITE GL_WHITE
+#define PIECE_BLACK         GL_BLACK
+#define PIECE_WHITE         GL_WHITE
+#define PIECE_HIGHLIGHT     GL_RED
+#define PIECE_BLACK_LIGHT   gl_color(96,96,96)
+#define PIECE_WHITE_LIGHT   gl_color(211,211,211)
 
 #define THIN_CURSOR     3
 #define THICK_CURSOR    5
 
+#define SIDEBAR_PADDING 5
+
 #if THEME == MANGO
 #define CHESS_BLACK gl_color(188,  81, 150)
 #define CHESS_WHITE gl_color(243, 216, 95)
+#define SIDEBAR_FT  gl_color(243, 216, 95)
+#define SIDEBAR_BG  gl_color(  0,   0,   0)
 #elif THEME == CHESS_COM_BLUE
 #define CHESS_BLACK gl_color( 84, 114, 150)
 #define CHESS_WHITE gl_color(234, 233, 212)
+#define SIDEBAR_FT  gl_color(255, 255, 255)
+#define SIDEBAR_BG  gl_color(  0,   0,   0)
 #else
 #define CHESS_BLACK gl_color(124, 149, 93)
 #define CHESS_WHITE gl_color(238, 238, 213)
+#define SIDEBAR_FT  gl_color(255, 255, 255)
+#define SIDEBAR_BG  gl_color(  0,   0,   0)
 #endif
 
 #define CURSOR_COLOR gl_color(222, 187, 11) // #debb0b lol
 
-static const char chess_gui_piece_names[] = { ' ', 'P', 'N', 'B', 'R', 'Q', 'K', 'p', 'n', 'b', 'r', 'q', 'k' };
+#define SIZE(x) (sizeof(x) / sizeof(*x))
+
+static const char CHESS_GUI_PIECE_NAMES[] = { ' ', 'P', 'N', 'B', 'R', 'Q', 'K', 'p', 'n', 'b', 'r', 'q', 'k' };
 
 // initialize
 static const chess_gui_piece_t STARTING_BOARD[CHESS_SIZE][CHESS_SIZE] = {
@@ -67,9 +80,6 @@ static const chess_gui_piece_t STARTING_BOARD[CHESS_SIZE][CHESS_SIZE] = {
 
 static chess_gui_piece_t board[CHESS_SIZE][CHESS_SIZE];
 
-static chess_gui_piece_t taken[4 * CHESS_SIZE];
-static int taken_count = 0;
-
 static uint8_t stale[CHESS_SIZE][CHESS_SIZE];
 
 static struct {
@@ -80,6 +90,24 @@ static struct {
     int row;
     int col;
 } cursor;
+
+static struct {
+    int from_col;
+    int from_row;
+    int to_col;
+    int to_row;
+
+    bool display;
+} engine_move;
+
+static struct {
+    chess_gui_piece_t taken[4 * CHESS_SIZE];
+    int taken_count;
+
+    char W[6];
+    char D[6];
+    char L[6];
+} sidebar;
 
 static bool is_white(chess_gui_piece_t piece) {
     switch (piece) {
@@ -109,7 +137,7 @@ static void stale_everything(void) {
     memset(stale, 1, sizeof(stale));
 }
 
-void chess_gui_draw(void) {
+static void gui_draw(bool after_swap) {
     // draw the chess board
     for (int row = 0; row < 8; row++) {
         int black_square = row % 2;
@@ -124,19 +152,36 @@ void chess_gui_draw(void) {
                         );
 
                 if (row == cursor.row && col == cursor.col && cursor.has_chosen) {
+                    // selected: draw yellow
                     gl_draw_char(
                             SQUARE_SIZE*col + SQUARE_SIZE / 2 - gl_get_char_width() / 2,
                             SQUARE_SIZE*row + SQUARE_SIZE / 2 - gl_get_char_height() / 2,
-                            chess_gui_piece_names[board[cursor.chosen_row][cursor.chosen_col]],
+                            CHESS_GUI_PIECE_NAMES[board[cursor.chosen_row][cursor.chosen_col]],
                             CURSOR_COLOR
                             );
                 } else if (row == cursor.chosen_row && col == cursor.chosen_col && cursor.has_chosen) {
-                    // draw nothing
+                    // selected piece's original location draw nothing
+                } else if (engine_move.display && row == engine_move.to_row && col == engine_move.to_col) {
+                    // engine's latest move: highlight in red
+                    gl_draw_char(
+                            SQUARE_SIZE*col + SQUARE_SIZE / 2 - gl_get_char_width() / 2,
+                            SQUARE_SIZE*row + SQUARE_SIZE / 2 - gl_get_char_height() / 2,
+                            CHESS_GUI_PIECE_NAMES[board[row][col]],
+                            PIECE_HIGHLIGHT
+                            );
+                } else if (engine_move.display && row == engine_move.from_row && col == engine_move.from_col) {
+                    // where the piece that engine moved last was: light shade
+                    gl_draw_char(
+                            SQUARE_SIZE*col + SQUARE_SIZE / 2 - gl_get_char_width() / 2,
+                            SQUARE_SIZE*row + SQUARE_SIZE / 2 - gl_get_char_height() / 2,
+                            CHESS_GUI_PIECE_NAMES[board[row][col]],
+                            is_white(board[row][col]) ? PIECE_WHITE_LIGHT : PIECE_BLACK_LIGHT
+                            );
                 } else {
                     gl_draw_char(
                             SQUARE_SIZE*col + SQUARE_SIZE / 2 - gl_get_char_width() / 2,
                             SQUARE_SIZE*row + SQUARE_SIZE / 2 - gl_get_char_height() / 2,
-                            chess_gui_piece_names[board[row][col]],
+                            CHESS_GUI_PIECE_NAMES[board[row][col]],
                             is_white(board[row][col]) ? PIECE_WHITE : PIECE_BLACK
                             );
                 }
@@ -170,8 +215,196 @@ void chess_gui_draw(void) {
             }
 
             black_square = !black_square;
-            stale[row][col] = 0;
+
+            if (after_swap)
+                stale[row][col] = 0;
         }
+    }
+}
+
+void chess_gui_draw(void) {
+    gui_draw(false);
+    gl_swap_buffer();
+    gui_draw(true);
+}
+
+static void draw_text_centered(const char *text, int x, int y, int w, color_t color) {
+    int char_w = gl_get_char_width();
+    int text_width = char_w * strlen(text);
+    
+    if (text_width > w) {
+        // text is too long, draw as much as possible
+        text_width = w;
+    }
+
+    gl_draw_string(
+            x + (w - text_width) / 2,
+            y,
+            text,
+            color
+            );
+}
+
+static void sidebar_draw(void) {
+    static const char *HEADERS[] = {
+        "Mango Chess",
+        "Javier & Ellen",
+        "CS107E Winter 2024"
+    };
+
+    gl_draw_rect(
+            SQUARE_SIZE * 8,
+            0,
+            SCREEN_WIDTH - SQUARE_SIZE * 8,
+            SCREEN_HEIGHT,
+            SIDEBAR_BG
+            );
+
+    int line = 0;
+
+    int char_h = gl_get_char_height();
+    for (int i = 0; i < SIZE(HEADERS); i++) {
+        draw_text_centered(
+                HEADERS[i],
+                SQUARE_SIZE * 8 + SIDEBAR_PADDING,
+                (char_h + SIDEBAR_PADDING) * line,
+                SCREEN_WIDTH - SQUARE_SIZE * 8,
+                SIDEBAR_FT
+                );
+        line++;
+    }
+
+    line++;
+
+    draw_text_centered(
+#if PLAYING == WHITE
+            "Playing White",
+#else
+            "Playing Black",
+#endif
+            SQUARE_SIZE * 8 + SIDEBAR_PADDING,
+            (char_h + SIDEBAR_PADDING) * line,
+            SCREEN_WIDTH - SQUARE_SIZE * 8,
+            SIDEBAR_FT
+            );
+
+    line++;
+
+    draw_text_centered(
+            "Stats",
+            SQUARE_SIZE * 8 + SIDEBAR_PADDING,
+            (char_h + SIDEBAR_PADDING) * line,
+            SCREEN_WIDTH - SQUARE_SIZE * 8,
+            SIDEBAR_FT
+            );
+
+    line++;
+
+    char str[64];
+
+    str[0] = '\0';
+    strlcat(str, "Win: ", sizeof(str));
+    strlcat(str, sidebar.W, sizeof(str));
+    strlcat(str, "%", sizeof(str));
+    gl_draw_string(
+            SQUARE_SIZE * 8 + SIDEBAR_PADDING,
+            (char_h + SIDEBAR_PADDING) * line,
+            str,
+            SIDEBAR_FT
+            );
+
+    line++;
+
+    str[0] = '\0';
+    strlcat(str, "Draw: ", sizeof(str));
+    strlcat(str, sidebar.D, sizeof(str));
+    strlcat(str, "%", sizeof(str));
+    gl_draw_string(
+            SQUARE_SIZE * 8 + SIDEBAR_PADDING,
+            (char_h + SIDEBAR_PADDING) * line,
+            str,
+            SIDEBAR_FT
+            );
+
+    line++;
+
+    str[0] = '\0';
+    strlcat(str, "Lose: ", sizeof(str));
+    strlcat(str, sidebar.L, sizeof(str));
+    strlcat(str, "%", sizeof(str));
+    gl_draw_string(
+            SQUARE_SIZE * 8 + SIDEBAR_PADDING,
+            (char_h + SIDEBAR_PADDING) * line,
+            str,
+            SIDEBAR_FT
+            );
+
+    // for (int i = 0; i < sidebar.taken_count; i++) {
+    //     gl_draw_char(
+    //             SQUARE_SIZE * 8 + SIDEBAR_PADDING,
+    //             SQUARE_SIZE * 2 + (char_h + SIDEBAR_PADDING) * i,
+    //             CHESS_GUI_PIECE_NAMES[sidebar.taken[i]],
+    //             is_white(sidebar.taken[i]) ? PIECE_WHITE : PIECE_BLACK
+    //             );
+    // }
+}
+
+void chess_gui_sidebar(void) {
+    sidebar_draw();
+    gl_swap_buffer();
+    sidebar_draw();
+}
+
+void chess_gui_stats(char *W, char *D, char *L) {
+#if PLAYING == BLACK
+    char *tmp = W;
+    W = L;
+    L = tmp;
+#endif
+
+    if (W != NULL) {
+        sidebar.W[0] = '\0';
+        strlcat(sidebar.W, W, sizeof(sidebar.W));
+    }
+
+    if (D != NULL) {
+        sidebar.D[0] = '\0';
+        strlcat(sidebar.D, D, sizeof(sidebar.D));
+    }
+
+    if (L != NULL) {
+        sidebar.L[0] = '\0';
+        strlcat(sidebar.L, L, sizeof(sidebar.L));
+    }
+
+    chess_gui_sidebar();
+}
+
+void chess_gui_promote(int cursor) {
+    static const char *PROMOTION_PIECES[] = {
+        "Rook",
+        "Knight",
+        "Bishop",
+        "Queen"
+    };
+
+    if (0 <= cursor && cursor <= 3) {
+        int char_h = gl_get_char_height();
+
+        for (int i = 0; i < 4; i++) {
+            gl_draw_string(
+                    SQUARE_SIZE * 8 + 5,
+                    SQUARE_SIZE * 6 + (char_h + 5) * (i + 1),
+                    PROMOTION_PIECES[i],
+                    cursor == i ? GL_RED : SIDEBAR_FT);
+        }
+    } else {
+        gl_draw_rect(
+                SQUARE_SIZE * 8,
+                SQUARE_SIZE * 6,
+                SCREEN_WIDTH - SQUARE_SIZE * 8,
+                SCREEN_HEIGHT - SQUARE_SIZE * 6,
+                SIDEBAR_BG);
     }
 }
 
@@ -205,9 +438,8 @@ static void reset_cursor(void) {
 #endif
 }
 
-void chess_gui_update(const char *move) {
+void chess_gui_update(const char *move, bool engine) {
     // UCI format: e2e4\n
-
     int col1 = move[0] - 'a';
     int col2 = move[2] - 'a';
 
@@ -217,7 +449,7 @@ void chess_gui_update(const char *move) {
 
     // keep track of taken pieces
     if (board[row2][col2] != XX) {
-        taken[taken_count++] = board[row2][col2];
+        sidebar.taken[sidebar.taken_count++] = board[row2][col2];
     }
 
     // castling
@@ -276,6 +508,12 @@ void chess_gui_update(const char *move) {
 
     board[row1][col1] = XX;
 
+    engine_move.display  = engine;
+    engine_move.from_col = col1;
+    engine_move.from_row = row1;
+    engine_move.to_col   = col2;
+    engine_move.to_row   = row2;
+
     stale_everything();
     reset_cursor();
     chess_gui_draw();
@@ -286,15 +524,22 @@ void chess_gui_print(void) {
     for (int i = 0; i < 8; i++) {
         printf("|");
         for (int j = 0; j < 8; j++) {
-            printf(" %c |", chess_gui_piece_names[board[i][j]]);
+            printf(" %c |", CHESS_GUI_PIECE_NAMES[board[i][j]]);
         }
         printf("\n+---+---+---+---+---+---+---+---+\n");
     }
 }
 
 void chess_gui_init(void) {
-    gl_init(SCREEN_WIDTH, SCREEN_HEIGHT, GL_SINGLEBUFFER);
+    gl_init(SCREEN_WIDTH, SCREEN_HEIGHT, GL_DOUBLEBUFFER);
     memcpy(board, STARTING_BOARD, sizeof(STARTING_BOARD));
+
+    sidebar.W[0] = sidebar.D[0] = sidebar.L[0] = '*';
+    sidebar.W[1] = sidebar.D[1] = sidebar.L[1] = '*';
+    sidebar.W[2] = sidebar.D[2] = sidebar.L[2] = '\0';
+
     stale_everything();
     reset_cursor();
+    chess_gui_draw();
+    chess_gui_sidebar();
 }

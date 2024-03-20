@@ -2,6 +2,7 @@
 #include "interrupts.h"
 #include "jnxu.h"
 #include "printf.h"
+#include "malloc.h"
 #include "timer.h"
 #include "uart.h"
 #include "chess.h"
@@ -30,12 +31,12 @@ static struct {
     int move[5];
 } module;
 
-static const char promotion_piece_names[] = { 'r', 'n', 'b', 'q', 'q', 'b', 'n', 'r' };
+static const char PROMOTION_PIECE_NAMES[] = { 'r', 'n', 'b', 'q' };
 
 static void reset_cursor(void) {
     module.cursor_x = 0;
     module.cursor_y = CHESS_SIZE - 1;
-    module.cursor_promotion = 0;
+    module.cursor_promotion = -1;
 }
 
 static void paint_cursor(void) {
@@ -66,19 +67,16 @@ static void update_cursor(void *aux_data, const uint8_t *message, size_t len) {
             module.cursor_y += motion;
             break;
         case LISTENING_PROMOTION:
-            // TODO fancy popup promotion
             module.cursor_promotion += motion;
             break;
     }
 
     module.cursor_x = CLAMP(module.cursor_x, 0, 7);
     module.cursor_y = CLAMP(module.cursor_y, 0, 7);
-    module.cursor_promotion = CLAMP(module.cursor_promotion, -1, 7);
+    module.cursor_promotion = CLAMP(module.cursor_promotion, -1, 3);
 
     if (module.state == LISTENING_PROMOTION) {
-        int visual_cursor_x = module.cursor_promotion;
-        int visual_cursor_y = 0;
-        chess_gui_draw_cursor(visual_cursor_x, visual_cursor_y, false);
+        chess_gui_promote(module.cursor_promotion);
     } else {
         paint_cursor();
     }
@@ -114,7 +112,7 @@ static void button_press(void *aux_data, const uint8_t *message, size_t len) {
 #endif
 
                 if (module.cursor_promotion >= 0) {
-                    opp_move[4] = promotion_piece_names[module.cursor_promotion];
+                    opp_move[4] = PROMOTION_PIECE_NAMES[module.cursor_promotion];
                     opp_move[5] = '\n';
                 } else {
                     opp_move[4] = '\n';
@@ -125,13 +123,14 @@ static void button_press(void *aux_data, const uint8_t *message, size_t len) {
                 char your_move[8];
                 chess_get_move(your_move, sizeof(your_move)); // get stockfish move 
                 if (strcmp(your_move, "NOPE\n") != 0) {
-                    chess_gui_update(opp_move);
-                    chess_gui_update(your_move);
+                    chess_gui_update(opp_move, false);
+                    chess_gui_update(your_move, true);
                     jnxu_send(CMD_MOVE, (const uint8_t *)your_move, 6); // send stockfish move to hand
                 }
 
                 reset_cursor();
                 paint_cursor();
+                chess_gui_promote(-1);
             }
             break;
     }
@@ -162,16 +161,37 @@ int main(void) {
     chess_gui_init();
     reset_cursor();
     paint_cursor();
+    chess_gui_sidebar();
     chess_init();
-    // chess_gui_print();
 
 #if PLAYING == WHITE
     char your_move[8];
     chess_get_move(your_move, sizeof(your_move));
-    chess_gui_update(your_move);
+    chess_gui_update(your_move, true);
     jnxu_send(CMD_MOVE, (const uint8_t *)your_move, 6);
 #endif
 
     while (1) {
+        char *cmd = chess_next_command();
+        if (cmd != NULL) {
+            int len = strlen(cmd);
+            if (cmd[0] == 'S' && len <= 5) {
+                cmd[len - 1] = '\0';
+                // stats
+                switch (cmd[1]) {
+                    case 'W':
+                        chess_gui_stats(cmd + 2, NULL, NULL);
+                        break;
+                    case 'D':
+                        chess_gui_stats(NULL, cmd + 2, NULL);
+                        break;
+                    case 'L':
+                        chess_gui_stats(NULL, NULL, cmd + 2);
+                        break;
+                }
+            }
+
+            free(cmd);
+        }
     }
 }

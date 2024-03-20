@@ -1,6 +1,5 @@
 from stockfish import Stockfish
 import serial
-import time
 from sys import platform
 
 # Ellen's config
@@ -18,7 +17,12 @@ else:
 
 #----------------------------------------------------------------
 
-stockfish = Stockfish(path=STOCKFISH_PATH)
+stockfish = Stockfish(path=STOCKFISH_PATH, depth=20, parameters={
+    "Threads": 2,
+    "Skill Level": 20,
+    "Hash": 2048, # 2GB
+    "MultiPV": 1,
+    })
 
 def get_move():
     while True:
@@ -35,6 +39,12 @@ def send_move(move):
     move += "\n"
     ser.write(move.encode())
 
+def send_command(cmd):
+    if (len(cmd) > 128):
+        raise Exception("Command too long")
+    cmd = "/" + cmd + "\n"
+    ser.write(cmd.encode())
+
 with serial.Serial(SERIAL_PORT, 115200, timeout=1) as ser:
     # try:
     start = ser.readline().decode("ascii").strip()
@@ -45,7 +55,7 @@ with serial.Serial(SERIAL_PORT, 115200, timeout=1) as ser:
     ser.write("READY\n".encode())
 
     if player == "WHITE":
-        stockfish.make_moves_from_current_position(["e2e4"]) # defualt starting move
+        stockfish.make_moves_from_current_position(["e2e4"]) # default starting move
         send_move("e2e4")
 
     while True:
@@ -59,12 +69,27 @@ with serial.Serial(SERIAL_PORT, 115200, timeout=1) as ser:
 
         best_move = stockfish.get_best_move()
         if best_move is None:
-            best_move = "MATE"
+            best_move = "/MATE"
         else:
             stockfish.make_moves_from_current_position([best_move])
 
         print("Stockfish move: ", best_move)
         send_move(best_move)
+
+        # evaluate
+        WDL = stockfish.get_wdl_stats()
+        if WDL:
+            percentage = lambda x: int(x * 100)
+            W, D, L = WDL
+            pW = percentage(W / (W + D + L))
+            send_command("SW" + str(pW))
+
+            pD = percentage(D / (W + D + L))
+            send_command("SD" + str(pD))
+
+            pL = percentage(L / (W + D + L))
+            send_command("SL" + str(pL))
+
     # except serial.serialutil.SerialException:
     #     print("Error")
     #     time.sleep(0.1)

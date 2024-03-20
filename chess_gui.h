@@ -48,11 +48,12 @@ void chess_gui_draw_cursor(int x, int y, bool is_piece_moved);
 /*
  * `chess_gui_update` updates the UI based on the new move.
  *
- * @param move  the move to be updated, with UCI format (e.g. "e2e4\n",
- *              "e7e8q\n" for promotion, etc.). Only the first 5 characters are
- *              accessed.
+ * @param move      the move to be updated, with UCI format (e.g. "e2e4\n",
+ *                  "e7e8q\n" for promotion, etc.). Only the first 5 characters
+ *                  are accessed.
+ * @param engine    whether the move was performed by the engine (to highlight)
  */
-void chess_gui_update(const char* move);
+void chess_gui_update(const char *move, bool engine);
 
 /*
  * `chess_gui_print` prints the current board state to the console.
@@ -66,5 +67,29 @@ void chess_gui_print(void);
  * Calling it multiple times will reset the chessboard.
  */
 void chess_gui_init(void);
+
+/*
+ * `chess_gui_stats` prints the win, draw, and loss statistics to the screen.
+ *
+ * If a pointer is NULL, the corresponding statistic is not updated.
+ *
+ * @param W pointer to char representing the percentage of wins in the form of
+ *              "42" for 42% or "3" for 3%, or NULL if not to be updated.
+ * @param D similar to W, but for draws.
+ * @param L similar to W, but for losses.
+ */
+void chess_gui_stats(char *W, char *D, char *L);
+
+/*
+ * `chess_gui_promote` draws the promotion menu on the screen.
+ * 
+ * @param cursor    the cursor position (0-3) to highlight the selected piece
+ */
+void chess_gui_promote(int cursor);
+
+/*
+ * `chess_gui_sidebar` draws the sidebar on the screen.
+ */
+void chess_gui_sidebar(void);
 
 #endif
