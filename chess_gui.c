@@ -67,7 +67,6 @@
 
 
 #define SIZE(x) (sizeof(x) / sizeof(*x))
-#define CLAMP(x, min, max) ((x) > (max) ? (max) : ((x) < (min) ? (min) : (x)))
 
 static const char CHESS_GUI_PIECE_NAMES[] = { ' ', 'P', 'N', 'B', 'R', 'Q', 'K', 'p', 'n', 'b', 'r', 'q', 'k' };
 
@@ -314,8 +313,7 @@ static void sidebar_draw(void) {
             SIDEBAR_FT
             );
 
-    line++;
-    line++;
+    line += 3;
 
     // draw_text_centered(
     //         "Stats:",
@@ -331,7 +329,16 @@ static void sidebar_draw(void) {
     // draw_stat("Draw: ", sidebar.D, line++);
     // draw_stat("Lose: ", sidebar.L, line++);
 
+    draw_text_centered(
+            "Moves",
+            SQUARE_SIZE * 8,
+            (char_h + V_PADDING) * line,
+            SCREEN_WIDTH - SQUARE_SIZE * 8,
+            SIDEBAR_FT
+            );
+
     line += 2;
+
 
     int i = nmoves - HISTORY_LINES;
 
