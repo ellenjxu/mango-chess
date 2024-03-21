@@ -30,6 +30,7 @@
 
 #define THEME MANGO
 
+#define SHOW_STATS   false
 #define SHOW_LETTERS true
 #define SHOW_NUMBERS true
 
@@ -194,21 +195,25 @@ static void gui_draw(bool after_swap) {
                             );
                 }
 
-                if (row == 7 && SHOW_LETTERS) {
+#if SHOW_LETTERS
+                if (row == 7) {
                     gl_draw_char(
                             SQUARE_SIZE*(col + 1) - gl_get_char_width()  - PADDING,
                             SQUARE_SIZE*(row + 1) - gl_get_char_height() - PADDING,
                             'a' + col, black_square ? CHESS_WHITE : CHESS_BLACK
                             );
                 }
+#endif
 
-                if (col == 0 && SHOW_NUMBERS) {
+#if SHOW_NUMBERS
+                if (col == 0) {
                     gl_draw_char(
                             SQUARE_SIZE*col + PADDING,
                             SQUARE_SIZE*row + PADDING,
                             '1' + 7 - row, black_square ? CHESS_WHITE : CHESS_BLACK
                             );
                 }
+#endif
 
                 if (row == cursor.row && col == cursor.col) {
                     draw_border(
@@ -253,6 +258,7 @@ static void draw_text_centered(const char *text, int x, int y, int w, color_t co
             );
 }
 
+#if SHOW_STATS
 static void draw_stat(const char *label, char *number, int line) {
     int char_h = gl_get_char_height();
 
@@ -269,6 +275,7 @@ static void draw_stat(const char *label, char *number, int line) {
             SIDEBAR_FT
             );
 }
+#endif
 
 static void sidebar_draw(void) {
     static const char *HEADERS[] = {
@@ -314,24 +321,28 @@ static void sidebar_draw(void) {
             SIDEBAR_FT
             );
 
-    line += 3;
+    line ++;
 
-    // We figured stats where getting in the way of mvoe history, so we have
-    // commented them out:
 
-    // draw_text_centered(
-    //         "Stats:",
-    //         SQUARE_SIZE * 8,
-    //         (char_h + V_PADDING) * line,
-    //         SCREEN_WIDTH - SQUARE_SIZE * 8,
-    //         SIDEBAR_FT
-    //         );
+#if SHOW_STATS
+    line++;
 
-    // line++;
+    draw_text_centered(
+            "Stats:",
+            SQUARE_SIZE * 8,
+            (char_h + V_PADDING) * line,
+            SCREEN_WIDTH - SQUARE_SIZE * 8,
+            SIDEBAR_FT
+            );
 
-    // draw_stat("Win:  ", sidebar.W, line++);
-    // draw_stat("Draw: ", sidebar.D, line++);
-    // draw_stat("Lose: ", sidebar.L, line++);
+    line++;
+
+    draw_stat("Win:  ", sidebar.W, line++);
+    draw_stat("Draw: ", sidebar.D, line++);
+    draw_stat("Lose: ", sidebar.L, line++);
+#endif
+
+    line += 2;
 
     draw_text_centered(
             "Moves",
