@@ -69,3 +69,16 @@ Moments of pain:
  - Bluetooth can sometimes become unreliable, so we had to include many checks to ensure the connection was still alive at any given time, including "ping" and "echo" packets we created.
 
 ## Photos
+
+Since we mostly saw the project as a software project (and are opposed to cheating in real games!), we didn't focus on making a viable cheating device in terms of physical assembly.
+
+Below is a photo, showing the "Hand" Pi (Left) and the "Brain" Pi (Right) connected to the laptop running Stockfish. We can see the hand "Hand" Pi is connected to the Bluetooth module (on the breadboard), a rotary encoder, and a servo.
+![The two Pi's](https://github.com/cs107e/winter24-project-JGNieto-expofx/blob/master/photos/hardware.jpg?raw=true)
+
+Here are two fun photos:
+![Javier concentrating on cheating](https://github.com/cs107e/winter24-project-JGNieto-expofx/blob/master/photos/cheating.jpg?raw=true)
+![Ellen and Javier](https://github.com/cs107e/winter24-project-JGNieto-expofx/blob/master/photos/team.jpg?raw=true)
+
+## Video
+Javier actually deciphering a move from the buzzing of the servo: [video](https://github.com/cs107e/winter24-project-JGNieto-expofx/blob/master/photos/javier%20getting%20better.mp4)
+
