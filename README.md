@@ -82,3 +82,5 @@ Here are two fun photos:
 ## Video
 Javier actually deciphering a move from the buzzing of the servo: [video](https://github.com/cs107e/winter24-project-JGNieto-expofx/blob/master/photos/javier%20getting%20better.mp4)
 
+https://github.com/cs107e/winter24-project-JGNieto-expofx/assets/29519351/28f54d24-df44-4e88-bdce-c33eb4e76b61
+
