@@ -31,9 +31,10 @@ Code sources:
 ## Demo
 
 Two Mango Pis connected via Bluetooth. "Hand" Pi interfaces with rotary encoder + servo
-<img src="https://github.com/cs107e/winter24-project-JGNieto-expofx/blob/master/photos/hardware.jpg?raw=true" width="500" />
+<img src="https://github.com/ellenjxu/mango-chess/blob/master/photos/hardware.jpg?raw=true" width="500" />
 
-https://github.com/cs107e/winter24-project-JGNieto-expofx/assets/29519351/28f54d24-df44-4e88-bdce-c33eb4e76b61
+https://github.com/ellenjxu/mango-chess/assets/56745453/db248e11-a9dd-4169-abea-85a70d04ebb2
+
 
 ---
 
